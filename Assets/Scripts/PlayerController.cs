@@ -16,7 +16,6 @@ public class PlayerController : MonoBehaviour
     public float minBotGap;
     public float maxSpeed;
     public float approachSpeed;
-    public float slowDownDistance;
     Transform playerTransform;
     Resolution res;
     float viewsizeX;
@@ -97,14 +96,12 @@ public class PlayerController : MonoBehaviour
         if (gamestate == GameState.Running)
         {
             Vector3 adjustedTargetPos = targetPos + cam.transform.localPosition;
-            if (Vector3.Distance(playerTransform.localPosition,adjustedTargetPos) > slowDownDistance)
+            Vector3 targetVelocity = (adjustedTargetPos - playerTransform.localPosition) * approachSpeed;
+            if (targetVelocity.magnitude > maxSpeed)
             {
-                rb.velocity = (adjustedTargetPos - playerTransform.localPosition) * approachSpeed + Vector3.up * currentGeneralSpeed;
+                targetVelocity = targetVelocity.normalized * maxSpeed;
             }
-            else
-            {
-                rb.velocity = (adjustedTargetPos - playerTransform.localPosition) * approachSpeed / 5 + Vector3.up * currentGeneralSpeed;
-            }
+            rb.velocity = targetVelocity + Vector3.up * currentGeneralSpeed;
         }
         else
         {

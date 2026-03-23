@@ -601,13 +601,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2856738624873380008}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0.38268343, w: 0.92387956}
   m_LocalPosition: {x: 2.3600001, y: 16.0942, z: 0}
-  m_LocalScale: {x: 2, y: 1.8954346, z: 1}
+  m_LocalScale: {x: 3, y: 1.8954346, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 3257164932364407466}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 45}
 --- !u!212 &7368024758996991331
 SpriteRenderer:
   m_ObjectHideFlags: 0
@@ -1363,7 +1363,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   obstacleEntity: 1
   height: 45
-  speed: 1
+  speed: 0
 --- !u!1 &8641766336302712401
 GameObject:
   m_ObjectHideFlags: 0
@@ -1541,8 +1541,8 @@ Transform:
   m_GameObject: {fileID: 8758654024369440567}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -1, y: 7, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalPosition: {x: -1, y: 0, z: 0}
+  m_LocalScale: {x: 1.5, y: 1.5, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 3257164932364407466}
@@ -1662,9 +1662,9 @@ MonoBehaviour:
   movementTargets: []
   pushableLines:
   - start: {x: 0, y: 0, z: 0}
-    end: {x: 3, y: 3, z: 0}
-  - start: {x: 0, y: 0, z: 0}
-    end: {x: 0, y: 0, z: 0}
+    end: {x: 2, y: 0, z: 0}
+  - start: {x: 2, y: 0, z: 0}
+    end: {x: 2, y: 2, z: 0}
 --- !u!50 &4590993567933393262
 Rigidbody2D:
   serializedVersion: 4
@@ -1679,7 +1679,7 @@ Rigidbody2D:
   m_UseAutoMass: 0
   m_Mass: 100
   m_LinearDrag: 1
-  m_AngularDrag: 1
+  m_AngularDrag: 2
   m_GravityScale: 0
   m_Material: {fileID: 0}
   m_IncludeLayers:
@@ -1691,4 +1691,4 @@ Rigidbody2D:
   m_Interpolate: 0
   m_SleepingMode: 1
   m_CollisionDetection: 0
-  m_Constraints: 0
+  m_Constraints: 4

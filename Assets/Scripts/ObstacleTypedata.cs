@@ -110,7 +110,7 @@ public class ObstacleTypedata : MonoBehaviour
         }
 
         List<PushableLine> connected = new List<PushableLine>();
-        Vector3 closestLinePoint = null;
+        Vector3 closestLinePoint = Vector3.zero;
         float closestDistance = float.MaxValue;
         for (int i = 0; i < pushableLines.Count; i++)
         {
@@ -144,7 +144,10 @@ public class ObstacleTypedata : MonoBehaviour
                 closestLinePoint = currentClosestPoint;
             }
         }
-        gameObject.transform.position = closestLinePoint;
+        //gameObject.transform.position = closestLinePoint;
+
+        Vector3 toLineVeloc = gameObject.transform.position - closestLinePoint * (1/Time.fixedDeltaTime);
+        rb.velocity = toLineVeloc;
     }
 
     Vector3 GetClosestPointOnLine(Vector3 point, Vector3 linePoint1, Vector3 linePoint2)

@@ -61,7 +61,7 @@ public class GameplayManager : MonoBehaviour
                 Win();
             }
             pointsDisplay.text = Mathf.Round(points) + "m";
-            points += Time.deltaTime * pc.maxSpeed;
+            points += Time.deltaTime * pc.currentGeneralSpeed;
             if (Input.GetButtonDown("Cancel"))
             {
                 Stop();
@@ -128,7 +128,7 @@ public class GameplayManager : MonoBehaviour
         {
             return true;
         }
-        if (Math.Abs(pc.gameObject.transform.localPosition.x) > cam.orthographicSize * cam.aspect)
+        if (Math.Abs(pc.gameObject.transform.localPosition.x) > cam.orthographicSize * cam.aspect * 1.2)
         {
             return true;
         }
