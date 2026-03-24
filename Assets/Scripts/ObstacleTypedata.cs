@@ -42,6 +42,24 @@ public class ObstacleTypedata : MonoBehaviour
             pushableLines[i].start += gameObject.transform.position;
             pushableLines[i].end += gameObject.transform.position;
         }
+        if (this.gameObject.GetComponent<Collider2D>() == null)
+        {
+            Debug.LogWarning("Obsticle <" + this.gameObject.name + "> of <" + this.gameObject.transform.parent.name + "> has no correct Collider");
+        }
+        else if (collisionType == ObstacleCollisionType.Simple || collisionType == ObstacleCollisionType.Sharp)
+        {
+            if (this.gameObject.GetComponent<Collider2D>().isTrigger == true)
+            {
+                Debug.LogWarning("Obsticle <" + this.gameObject.name + "> of <" + this.gameObject.transform.parent.name + "> has no correct Collider");
+            }
+        }
+        else if (collisionType == ObstacleCollisionType.Air)
+        {
+            if (this.gameObject.GetComponent<Collider2D>().isTrigger == false)
+            {
+                Debug.LogWarning("Obsticle <" + this.gameObject.name + "> of <" + this.gameObject.transform.parent.name + "> has no correct Collider");
+            }
+        }
     }
 
     void FixedUpdate()
@@ -110,6 +128,7 @@ public class ObstacleTypedata : MonoBehaviour
         }
 
         List<PushableLine> connected = new List<PushableLine>();
+        PushableLine closestLine = null;
         Vector3 closestLinePoint = Vector3.zero;
         float closestDistance = float.MaxValue;
         for (int i = 0; i < pushableLines.Count; i++)
@@ -142,12 +161,39 @@ public class ObstacleTypedata : MonoBehaviour
             {
                 closestDistance = distance;
                 closestLinePoint = currentClosestPoint;
+                closestLine = pushableLines[i];
             }
         }
-        //gameObject.transform.position = closestLinePoint;
+        gameObject.transform.position = closestLinePoint;
 
-        Vector3 toLineVeloc = gameObject.transform.position - closestLinePoint * (1/Time.fixedDeltaTime);
-        rb.velocity = toLineVeloc;
+        Vector3 forcePoint = closestLinePoint + new Vector3(rb.velocity.x, rb.velocity.y, 0);
+
+        Vector3 linearAdjustedForcePoint = GetClosestPointOnLine(forcePoint, closestLine.start, closestLine.end);
+
+        var startEndRelativeVecAbs = closestLine.end - closestLine.start;
+        var endStartRelativeVecAbs = closestLine.start - closestLine.end;
+
+        var startCurrentRelativeVecPoint = transform.position - closestLine.start;
+        var endCurrentRelativeVecPoint = transform.position - closestLine.end;
+
+        var startCurrentRelativeVecForce = forcePoint - closestLine.start;
+        var endCurrentRelativeVecForce = forcePoint - closestLine.end;
+
+        bool pastStart = Vector3.Dot(startEndRelativeVecAbs, startCurrentRelativeVecPoint) < 0;
+        bool movingPastStart = Vector3.Dot(startEndRelativeVecAbs, startCurrentRelativeVecForce) < 0;
+
+        bool pastEnd = Vector3.Dot(endStartRelativeVecAbs, endCurrentRelativeVecPoint) < 0;
+        bool movingPastEnd = Vector3.Dot(endStartRelativeVecAbs, endCurrentRelativeVecForce) < 0;
+
+        if ((pastStart && movingPastStart) || (pastEnd && movingPastEnd))
+        {
+            rb.velocity = Vector3.zero;
+        }
+        else
+        {
+            Vector3 linearAdjustedForceRelative = linearAdjustedForcePoint - transform.position;
+            rb.velocity = linearAdjustedForceRelative;
+        }
     }
 
     Vector3 GetClosestPointOnLine(Vector3 point, Vector3 linePoint1, Vector3 linePoint2)
@@ -211,6 +257,7 @@ public enum ObstacleCollisionType
 {
     Simple,
     Sharp,
+    Air,
 }
 
 public enum ObstacleAgilityType

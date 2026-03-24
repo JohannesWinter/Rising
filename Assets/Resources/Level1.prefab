@@ -1049,7 +1049,7 @@ BoxCollider2D:
   m_GameObject: {fileID: 5157007442568370410}
   m_Enabled: 1
   m_Density: 1
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 6200000, guid: 149a641a363d3114cb1e3e57a8edebc1, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -1121,7 +1121,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &6136862840888571127
 Transform:
   m_ObjectHideFlags: 0
@@ -1363,7 +1363,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   obstacleEntity: 1
   height: 45
-  speed: 0
+  speed: 5
 --- !u!1 &8641766336302712401
 GameObject:
   m_ObjectHideFlags: 0
@@ -1531,7 +1531,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &8313255878815218023
 Transform:
   m_ObjectHideFlags: 0
@@ -1665,6 +1665,8 @@ MonoBehaviour:
     end: {x: 2, y: 0, z: 0}
   - start: {x: 2, y: 0, z: 0}
     end: {x: 2, y: 2, z: 0}
+  - start: {x: 0, y: 0, z: 0}
+    end: {x: 2, y: -2, z: 0}
 --- !u!50 &4590993567933393262
 Rigidbody2D:
   serializedVersion: 4

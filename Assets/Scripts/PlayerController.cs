@@ -96,12 +96,13 @@ public class PlayerController : MonoBehaviour
         if (gamestate == GameState.Running)
         {
             Vector3 adjustedTargetPos = targetPos + cam.transform.localPosition;
-            Vector3 targetVelocity = (adjustedTargetPos - playerTransform.localPosition) * approachSpeed;
+            Vector3 targetVelocity = (adjustedTargetPos - playerTransform.localPosition) * approachSpeed * currentGeneralSpeed;
             if (targetVelocity.magnitude > maxSpeed)
             {
                 targetVelocity = targetVelocity.normalized * maxSpeed;
             }
             rb.velocity = targetVelocity + Vector3.up * currentGeneralSpeed;
+
         }
         else
         {
@@ -117,7 +118,7 @@ public class PlayerController : MonoBehaviour
     void CollisionDetection()
     {
         Collider2D[] col = new Collider2D[5]; //random ass value
-        Physics2D.OverlapCollider(this.GetComponent<BoxCollider2D>(), new ContactFilter2D(), col);
+        Physics2D.OverlapCollider(this.GetComponent<CircleCollider2D>(), new ContactFilter2D(), col);
         for (int i = 0; i < col.Length; i++)
         {
             if (col[i] != null)
