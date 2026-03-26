@@ -4,7 +4,6 @@ using UnityEngine;
 
 public class Background : MonoBehaviour
 {
-    public Camera cam;
     public float speed;
     public GameObject backgroundObj;
     public float repeatingHeight;
@@ -17,17 +16,21 @@ public class Background : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        float newYVal = cam.transform.position.y * speed;
-        float distanceToCam = cam.transform.position.y - newYVal;
+        float newYVal = Manager.m.playerCamera.transform.position.y * speed;
 
-        if (distanceToCam > repeatingHeight)
+        if (repeatingHeight > 0)
         {
-            newYVal += Mathf.Floor(distanceToCam / repeatingHeight) * repeatingHeight;
+            float distanceToCam = Manager.m.playerCamera.transform.position.y - newYVal;
+            if (distanceToCam > repeatingHeight)
+            {
+                newYVal += Mathf.Floor(distanceToCam / repeatingHeight) * repeatingHeight;
+            }
+            else if (distanceToCam < -repeatingHeight)
+            {
+                newYVal -= Mathf.Floor(-distanceToCam / repeatingHeight) * repeatingHeight;
+            }
         }
-        else if (distanceToCam < -repeatingHeight)
-        {
-            newYVal -= Mathf.Floor(-distanceToCam / repeatingHeight) * repeatingHeight;
-        }
+
         Vector3 newPosition = new Vector3(backgroundObj.transform.position.x, newYVal, backgroundObj.transform.position.z);
         backgroundObj.transform.position = newPosition;
     }
