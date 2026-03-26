@@ -5,11 +5,9 @@ using UnityEngine;
 
 public class PlayerController : MonoBehaviour
 {
-    public GameState gamestate;
     public float currentGeneralSpeed;
     public bool dead;
     public GameObject playerObject;
-    public Camera cam;
     public Rigidbody2D rb;
     public float minSideGap;
     public float minTopGap;
@@ -21,6 +19,9 @@ public class PlayerController : MonoBehaviour
     float viewsizeX;
     float viewsizeY;
     Vector2 mousePos = Vector2.zero;
+    Vector2 currentAirPush;
+
+    float stunTimer;
 
     Vector3 targetPos;
     // Start is called before the first frame update
@@ -28,8 +29,8 @@ public class PlayerController : MonoBehaviour
     {
         res = Screen.currentResolution;
         playerTransform = playerObject.transform;
-        viewsizeX = cam.orthographicSize * cam.aspect;
-        viewsizeY = cam.orthographicSize;
+        viewsizeX = Manager.m.playerCamera.orthographicSize * Manager.m.playerCamera.aspect;
+        viewsizeY = Manager.m.playerCamera.orthographicSize;
     }
 
     // Update is called once per frame
@@ -40,20 +41,14 @@ public class PlayerController : MonoBehaviour
 
     void FixedUpdate()
     {
+        CollisionDetection();
         MoveToTarget();
         UpdateGeneralMovement();
-        CollisionDetection();
     }
 
     void UpdateTarget()
     {
-        if (gamestate == GameState.Menu)
-        {
-            targetPos = new Vector2(0, 0);
-            playerObject.transform.position = new Vector3(0,0,0);
-            return;
-        }
-        if (gamestate == GameState.Stopped)
+        if (Manager.m.gameplayManager.currentState == GameState.Stopped || Manager.m.gameplayManager.currentState == GameState.Resetting || stunTimer > 0)
         {
             return;
         }
@@ -93,32 +88,39 @@ public class PlayerController : MonoBehaviour
     }
     void MoveToTarget()
     {
-        if (gamestate == GameState.Running)
+        if (Manager.m.gameplayManager.currentState != GameState.Stopped && Manager.m.gameplayManager.currentState != GameState.Resetting && stunTimer <= 0)
         {
-            Vector3 adjustedTargetPos = targetPos + cam.transform.localPosition;
-            Vector3 targetVelocity = (adjustedTargetPos - playerTransform.localPosition) * approachSpeed * currentGeneralSpeed;
+            Vector3 adjustedTargetPos = targetPos + Manager.m.playerCamera.transform.localPosition;
+            Vector3 targetVelocity = (adjustedTargetPos - playerTransform.localPosition) * approachSpeed;
+
             if (targetVelocity.magnitude > maxSpeed)
             {
                 targetVelocity = targetVelocity.normalized * maxSpeed;
             }
             rb.velocity = targetVelocity + Vector3.up * currentGeneralSpeed;
-
+            rb.velocity += currentAirPush;
         }
         else
         {
+            stunTimer -= Time.fixedDeltaTime;
+            if (stunTimer < 0)
+                stunTimer = 0;
             rb.velocity = Vector2.zero;
         }
     }
 
     void UpdateGeneralMovement()
     {
-        cam.gameObject.transform.Translate(Vector3.up * Time.fixedDeltaTime * currentGeneralSpeed);
+        Manager.m.playerCamera.gameObject.transform.Translate(Vector3.up * Time.fixedDeltaTime * currentGeneralSpeed);
     }
 
     void CollisionDetection()
     {
-        Collider2D[] col = new Collider2D[5]; //random ass value
-        Physics2D.OverlapCollider(this.GetComponent<CircleCollider2D>(), new ContactFilter2D(), col);
+        currentAirPush = Vector2.zero;
+        Collider2D[] col = new Collider2D[5]; //5 = max detectable colliders
+        ContactFilter2D filter = new ContactFilter2D();
+        filter.useTriggers = true;
+        Physics2D.OverlapCollider(GetComponent<CircleCollider2D>(), filter, col);
         for (int i = 0; i < col.Length; i++)
         {
             if (col[i] != null)
@@ -147,6 +149,26 @@ public class PlayerController : MonoBehaviour
             case ObstacleCollisionType.Sharp:
                 dead = true;
                 break;
+            case ObstacleCollisionType.Air:
+                currentAirPush += obs.AIR_airFlow.AIR_force * obs.AIR_airFlow.AIR_currentPercentageAirStrength + obs.AIR_airFlow.AIR_force * RandomOf(new float[]{-1,1}) * Random.Range(0, obs.AIR_airFlow.AIR_variety) * obs.AIR_airFlow.AIR_currentPercentageAirStrength;
+                if (obs.AIR_airFlow.AIR_fullStrengthTime > 0) obs.AIR_airFlow.AIR_currentPercentageAirStrength += Time.fixedDeltaTime / obs.AIR_airFlow.AIR_fullStrengthTime;
+                else obs.AIR_airFlow.AIR_currentPercentageAirStrength = 1;
+                break;
+            case ObstacleCollisionType.Portal:
+                if (obs.PORTAL_portalData.relativity == Relativity.Relative)
+                    playerObject.transform.position = obs.gameObject.transform.position + new Vector3(obs.PORTAL_portalData.position.x, obs.PORTAL_portalData.position.y, 0);
+                else if (obs.PORTAL_portalData.relativity == Relativity.Absolute)
+                    playerObject.transform.position = obs.PORTAL_portalData.position;
+
+                if (obs.PORTAL_portalData.stunTimer > stunTimer)
+                    stunTimer = obs.PORTAL_portalData.stunTimer;
+
+                break;
         }
+    }
+
+    static float RandomOf(float[] randoms) //returns random number in Array
+    {
+        return randoms[Random.Range(0, randoms.Length)];
     }
 }

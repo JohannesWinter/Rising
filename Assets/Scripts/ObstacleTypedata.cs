@@ -17,15 +17,19 @@ public class ObstacleTypedata : MonoBehaviour
     Vector3 startScale;
     Vector3 startRotation;
 
-    public List<ObstacleMovementTarget> movementTargets;
-    public List<PushableLine> pushableLines;
+    public List<ObstacleMovementTarget> MOVING_movementTargets;
+    public List<PushableLine> PUSH_pushableLines;
+    public AirFlow AIR_airFlow;
+    public PortalData PORTAL_portalData;
+
 
     int nextTargetEntry;
     Vector3 aimPosition = Vector3.zero;
-
     ObstacleMovementTarget currentTarget;
+    float lastFixedUpdatePercentageAirStrength;
 
     float MinLineConnectDistance = 0.1f;
+
 
     void Start()
     {
@@ -34,13 +38,13 @@ public class ObstacleTypedata : MonoBehaviour
             startPosition = transform.position;
             startScale = transform.localScale;
             startRotation = transform.rotation.eulerAngles;
-            currentTarget = movementTargets[0];
+            currentTarget = MOVING_movementTargets[0];
             nextTargetEntry = 0;
         }
-        for (int i = 0; i < pushableLines.Count; i++)
+        for (int i = 0; i < PUSH_pushableLines.Count; i++)
         {
-            pushableLines[i].start += gameObject.transform.position;
-            pushableLines[i].end += gameObject.transform.position;
+            PUSH_pushableLines[i].start += gameObject.transform.position;
+            PUSH_pushableLines[i].end += gameObject.transform.position;
         }
         if (this.gameObject.GetComponent<Collider2D>() == null)
         {
@@ -60,6 +64,13 @@ public class ObstacleTypedata : MonoBehaviour
                 Debug.LogWarning("Obsticle <" + this.gameObject.name + "> of <" + this.gameObject.transform.parent.name + "> has no correct Collider");
             }
         }
+        else if (collisionType == ObstacleCollisionType.Portal)
+        {
+            if (PORTAL_portalData.relativity == Relativity.Absolute)
+            {
+                PORTAL_portalData.position += new Vector2(transform.position.x, transform.position.y);
+            }
+        }
     }
 
     void FixedUpdate()
@@ -73,20 +84,24 @@ public class ObstacleTypedata : MonoBehaviour
         {
             CorrectPush();
         }
+        if (collisionType == ObstacleCollisionType.Air)
+        {
+            UpdateAirPush();
+        }
     }
 
     void SetTarget()
     {
         if (currentTarget == null || (currentTarget.remainingDuration <= 0))
         {
-            if (nextTargetEntry >= movementTargets.Count)
+            if (nextTargetEntry >= MOVING_movementTargets.Count)
             {
                 nextTargetEntry = 0;
                 transform.position = startPosition;
                 transform.rotation = Quaternion.Euler(startRotation);
                 transform.localScale = startScale;
             }
-            string targetStr = JsonUtility.ToJson(movementTargets[nextTargetEntry]);
+            string targetStr = JsonUtility.ToJson(MOVING_movementTargets[nextTargetEntry]);
             currentTarget = JsonUtility.FromJson<ObstacleMovementTarget>(targetStr);
             currentTarget.startPosition = transform.position;
             currentTarget.startRotation = transform.rotation;
@@ -122,7 +137,7 @@ public class ObstacleTypedata : MonoBehaviour
 
     void CorrectPush()
     {
-        if (pushableLines.Count == 0)
+        if (PUSH_pushableLines.Count == 0)
         {
             return;
         }
@@ -131,37 +146,37 @@ public class ObstacleTypedata : MonoBehaviour
         PushableLine closestLine = null;
         Vector3 closestLinePoint = Vector3.zero;
         float closestDistance = float.MaxValue;
-        for (int i = 0; i < pushableLines.Count; i++)
+        for (int i = 0; i < PUSH_pushableLines.Count; i++)
         {
-            var distance = GetDistanceFromLine(transform.position, pushableLines[i].start, pushableLines[i].end);
-            var currentClosestPoint = GetClosestPointOnLine(transform.position, pushableLines[i].start, pushableLines[i].end);
+            var distance = GetDistanceFromLine(transform.position, PUSH_pushableLines[i].start, PUSH_pushableLines[i].end);
+            var currentClosestPoint = GetClosestPointOnLine(transform.position, PUSH_pushableLines[i].start, PUSH_pushableLines[i].end);
 
-            var startEndRelativeVec = pushableLines[i].end - pushableLines[i].start;
-            var startCurrentRelativeVec = currentClosestPoint - pushableLines[i].start;
+            var startEndRelativeVec = PUSH_pushableLines[i].end - PUSH_pushableLines[i].start;
+            var startCurrentRelativeVec = currentClosestPoint - PUSH_pushableLines[i].start;
 
-            var endStartRelativeVec = pushableLines[i].start - pushableLines[i].end;
-            var endCurrentRelativeVec = currentClosestPoint - pushableLines[i].end;
+            var endStartRelativeVec = PUSH_pushableLines[i].start - PUSH_pushableLines[i].end;
+            var endCurrentRelativeVec = currentClosestPoint - PUSH_pushableLines[i].end;
 
             if (Vector3.Dot(startEndRelativeVec, startCurrentRelativeVec) < 0)
             {
-                distance = Vector3.Distance(pushableLines[i].start, transform.position);
-                currentClosestPoint = pushableLines[i].start;
+                distance = Vector3.Distance(PUSH_pushableLines[i].start, transform.position);
+                currentClosestPoint = PUSH_pushableLines[i].start;
             }
             else if (Vector3.Dot(endStartRelativeVec, endCurrentRelativeVec) < 0)
             {
-                distance = Vector3.Distance(pushableLines[i].end, transform.position);
-                currentClosestPoint = pushableLines[i].end;
+                distance = Vector3.Distance(PUSH_pushableLines[i].end, transform.position);
+                currentClosestPoint = PUSH_pushableLines[i].end;
             }
 
             if (distance <= MinLineConnectDistance)
             {
-                connected.Add(pushableLines[i]);
+                connected.Add(PUSH_pushableLines[i]);
             }
             if (distance < closestDistance)
             {
                 closestDistance = distance;
                 closestLinePoint = currentClosestPoint;
-                closestLine = pushableLines[i];
+                closestLine = PUSH_pushableLines[i];
             }
         }
         gameObject.transform.position = closestLinePoint;
@@ -194,6 +209,20 @@ public class ObstacleTypedata : MonoBehaviour
             Vector3 linearAdjustedForceRelative = linearAdjustedForcePoint - transform.position;
             rb.velocity = linearAdjustedForceRelative;
         }
+    }
+
+    void UpdateAirPush()
+    {
+        if (AIR_airFlow.AIR_currentPercentageAirStrength == lastFixedUpdatePercentageAirStrength)
+            AIR_airFlow.AIR_currentPercentageAirStrength = 0;
+
+        if (AIR_airFlow.AIR_currentPercentageAirStrength > 1)
+            AIR_airFlow.AIR_currentPercentageAirStrength = 1;
+        else if (AIR_airFlow.AIR_currentPercentageAirStrength < 0)
+            AIR_airFlow.AIR_currentPercentageAirStrength = 0;
+
+        //last
+        lastFixedUpdatePercentageAirStrength = AIR_airFlow.AIR_currentPercentageAirStrength;
     }
 
     Vector3 GetClosestPointOnLine(Vector3 point, Vector3 linePoint1, Vector3 linePoint2)
@@ -258,6 +287,7 @@ public enum ObstacleCollisionType
     Simple,
     Sharp,
     Air,
+    Portal,
 }
 
 public enum ObstacleAgilityType
@@ -274,6 +304,11 @@ public enum ObstacleMovementType
     Increasing,
     Instant,
     Delayed,
+}
+public enum Relativity
+{
+    Relative,
+    Absolute,
 }
 
 
@@ -303,4 +338,20 @@ public class PushableLine
 {
     public Vector3 start;
     public Vector3 end;
+}
+
+[Serializable]
+public class AirFlow
+{
+    public Vector2 AIR_force;
+    public float AIR_variety;
+    public float AIR_fullStrengthTime;
+    public float AIR_currentPercentageAirStrength;
+}
+[Serializable]
+public class PortalData
+{
+    public Vector2 position;
+    public Relativity relativity;
+    public float stunTimer;
 }

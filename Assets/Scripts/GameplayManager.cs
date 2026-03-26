@@ -7,11 +7,10 @@ using Unity.VisualScripting.Antlr3.Runtime;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.Rendering.Universal;
 
 public class GameplayManager : MonoBehaviour
 {
-    public PlayerController pc;
-    public Worldbuilder wb;
     public GameObject pointsPanel;
     public TextMeshProUGUI pointsDisplay;
 
@@ -20,11 +19,15 @@ public class GameplayManager : MonoBehaviour
 
     public GameObject levelStopMenu;
     public Button levelCancelButton;
-    public Camera cam;
     public int currentTimeScale;
-    int currentLevel;
+    public int currentLevel;
+    public float cameraResetSpeed;
+    public float maxCameraResetTime;
+    public float playerDisappearDuration;
+    public float playerReappearDuration;
+    public float playerReapperWaitTime;
 
-    GameState currentState;
+    public GameState currentState;
     float points = 0;
     void Start()
     {
@@ -37,10 +40,9 @@ public class GameplayManager : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        pc.gamestate = currentState;
         if (currentState == GameState.Menu)
         {
-            Time.timeScale = 0;
+            Time.timeScale = 1;
             pointsPanel.gameObject.SetActive(false);
             levelPanel.gameObject.SetActive(true);
             levelDisplay.text = "Level " + currentLevel;
@@ -52,16 +54,16 @@ public class GameplayManager : MonoBehaviour
         else if (currentState == GameState.Running)
         {
             Time.timeScale = currentTimeScale;
-            if (PlayerOutOfBounds() || pc.dead)
+            if (PlayerOutOfBounds() || Manager.m.playerController.dead)
             {
                 Fail();
             }
-            if (wb.finished == true)
+            if (Manager.m.worldBuilder.finished == true)
             {
                 Win();
             }
             pointsDisplay.text = Mathf.Round(points) + "m";
-            points += Time.deltaTime * pc.currentGeneralSpeed;
+            points += Time.deltaTime * Manager.m.playerController.currentGeneralSpeed;
             if (Input.GetButtonDown("Cancel"))
             {
                 Stop();
@@ -70,18 +72,23 @@ public class GameplayManager : MonoBehaviour
         else if (currentState == GameState.Stopped)
         {
             Time.timeScale = 0;
-            if (Input.GetButtonDown("Cancel"))
+            if (Input.GetButtonDown("Cancel") || Input.GetButtonUp("Fire1"))
             {
                 Continue();
             }
+
+        }
+        else if (currentState == GameState.Resetting)
+        {
+            Time.timeScale = currentTimeScale;
         }
     }
 
     void StartGame()
     {
-        wb.running = true;
+        Manager.m.worldBuilder.running = true;
+        Manager.m.worldBuilder.finished = false;
         currentState = GameState.Running;
-        wb.generate = 1;
         points = 0;
         levelPanel.gameObject.SetActive(false);
         pointsPanel.gameObject.SetActive(true);
@@ -89,50 +96,114 @@ public class GameplayManager : MonoBehaviour
 
     void Fail()
     {
-        pc.dead = false;
-        wb.running = false;
-        wb.reset = true;
-        currentState = GameState.Menu;
-        pc.playerObject.transform.localPosition = new Vector3(0,0,0);
-        pc.cam.transform.position = new Vector3(0,0,-10);
+        Manager.m.playerController.dead = false;
+        Manager.m.worldBuilder.Reset();
+        currentState = GameState.Resetting;
+        StartCoroutine(ResetCamera());
         levelStopMenu.SetActive(false);
     }
 
     void Win()
     {
-        wb.running = false;
-        wb.reset = true;
         currentLevel += 1;
+        Manager.m.worldBuilder.Reset();
         currentState = GameState.Menu;
-        pc.playerObject.transform.localPosition = new Vector3(0,0,0);
-        pc.cam.transform.position = new Vector3(0,0,-10);
+        Manager.m.playerCamera.transform.localPosition = new Vector3(0,0,-10);
         levelStopMenu.SetActive(false);
     }
     void Stop()
     {
         levelStopMenu.SetActive(true);
         currentState = GameState.Stopped;
-        wb.running = false;
+        Manager.m.worldBuilder.running = false;
     }
 
     void Continue()
     {
         levelStopMenu.SetActive(false);
         currentState = GameState.Running;
-        wb.running = true;
+        Manager.m.worldBuilder.running = true;
     }
 
     bool PlayerOutOfBounds()
     {
-        if (pc.gameObject.transform.localPosition.y < cam.gameObject.transform.position.y - cam.orthographicSize * 1.2)
+        if (Manager.m.playerController.gameObject.transform.localPosition.y < Manager.m.playerCamera.gameObject.transform.localPosition.y - Manager.m.playerCamera.orthographicSize * 1.2)
         {
             return true;
         }
-        if (Math.Abs(pc.gameObject.transform.localPosition.x) > cam.orthographicSize * cam.aspect * 1.2)
+        if (Math.Abs(Manager.m.playerController.gameObject.transform.localPosition.x) > Manager.m.playerCamera.orthographicSize * Manager.m.playerCamera.aspect * 1.2)
         {
             return true;
         }
         return false;
+    }
+
+    public IEnumerator ResetCamera()
+    {
+        currentState = GameState.Resetting;
+        SpriteRenderer playerSpr = Manager.m.playerController.playerObject.GetComponent<SpriteRenderer>();
+        Transform playerTrf = Manager.m.playerController.playerObject.transform;
+        Vector3 playerSize = playerTrf.localScale;
+        Light2D playerLight = Manager.m.playerController.playerObject.GetComponent<Light2D>();
+        float playerLightIntensity = playerLight.intensity;
+        Transform cam = Manager.m.playerCamera.transform;
+        Vector3 aimPosition = new Vector3(cam.position.x, Manager.m.worldBuilder.GetCurrentMinHeight(), cam.position.z);
+        Vector3 startPosition = cam.position;
+        Vector3 aimVector = aimPosition - startPosition;
+        float resetTime = Mathf.Min(Mathf.Abs(cam.position.y - aimPosition.y) / Mathf.Max(1, cameraResetSpeed), maxCameraResetTime);
+        float currentDuration = 0;
+
+        while (currentDuration < resetTime)
+        {
+            currentDuration += Time.unscaledDeltaTime;
+            float percentageDuration = currentDuration / resetTime;
+
+            float p = Mathf.Lerp(1f, 6f, 0.5f);
+            float a = Mathf.Pow(percentageDuration, p);
+            float b = Mathf.Pow(1f - percentageDuration, p);
+            
+            float percentageDistance = a / (a + b);
+
+            if (percentageDistance > 0.999) break;
+
+            cam.transform.position = startPosition + aimVector * percentageDistance;
+
+            if (resetTime < playerDisappearDuration)
+            {
+                playerSpr.color = new Color(playerSpr.color.r, playerSpr.color.g, playerSpr.color.b, 1 - percentageDuration);
+                playerTrf.localScale = playerSize * (1 - percentageDuration);
+                playerLight.intensity = playerLightIntensity * (1 - percentageDuration * 2);
+            }
+ 
+            else
+            {
+                playerSpr.color = new Color(playerSpr.color.r, playerSpr.color.g, playerSpr.color.b, 1 - Mathf.Max(0, currentDuration / playerDisappearDuration));
+                playerTrf.localScale = playerSize * (1 - currentDuration / playerDisappearDuration);
+                playerLight.intensity = playerLightIntensity * (1 - currentDuration / playerDisappearDuration * 2);
+            }
+            yield return null;
+        }
+        cam.transform.position = aimPosition;
+        Manager.m.playerController.playerObject.transform.localPosition = new Vector3(0, 0, 0);
+
+        float currentReappearDuration = 0;
+
+        while (currentReappearDuration < playerReappearDuration)
+        {
+            currentReappearDuration += Time.unscaledDeltaTime;
+            float percentageDuration = currentReappearDuration / playerReappearDuration;
+
+            playerSpr.color = new Color(playerSpr.color.r, playerSpr.color.g, playerSpr.color.b, percentageDuration);
+            playerTrf.localScale = playerSize * percentageDuration;
+            playerLight.intensity = playerLightIntensity * percentageDuration;
+            yield return null;
+        }
+        playerLight.intensity = playerLightIntensity;
+        playerTrf.localScale = playerSize;
+        playerLight.intensity = playerLightIntensity;
+
+        yield return new WaitForSecondsRealtime(playerReapperWaitTime);
+        currentState = GameState.Menu;
     }
 }
 
@@ -140,5 +211,6 @@ public enum GameState
 {
     Menu,
     Running,
-    Stopped
+    Stopped,
+    Resetting,
 }

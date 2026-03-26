@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using Unity.VisualScripting;
@@ -6,88 +7,71 @@ using UnityEngine;
 
 public class Worldbuilder : MonoBehaviour
 {
-    public PlayerController pc;
+    public Transform playerSpace;
     public GameObject squareSample;
-    public Camera cam;
+
     public bool running;
-    public bool reset;
-    public int generate;
     public bool finished;
 
     float currentMaxHeight;
-    List<Obstacle> obstacles;
+    float currentMinHeight;
 
-    public GameObject[] levels;
+    public List<Level> levelList;
     void Start()
     {
-        obstacles = new List<Obstacle>();
+
     }
 
     void Update()
     {
-        if (generate != 0)
-        {
-            Generate(generate);
-            generate = 0;
-
-        }
         if (running)
         {
-            for (int i = 0; i < obstacles.Count; i++)
-            {
-                if (obstacles[i].obstacleEntity == ObstacleEntity.Level)
-                {
-                    pc.currentGeneralSpeed = obstacles[i].speed;
-                    currentMaxHeight = obstacles[i].height;
-                }
-            }
+            Manager.m.playerController.currentGeneralSpeed = levelList[Manager.m.gameplayManager.currentLevel - 1].speed;
+            UpdateHeight();
         }
         else
         {
-            pc.currentGeneralSpeed = 0;
+            Manager.m.playerController.currentGeneralSpeed = 0;
         }   
 
-        if (reset)
-        {
-            reset = false;
-            Reset();
-        }
-
-        if (running == true && pc.cam.transform.position.y > currentMaxHeight)
+        if (running == true && Manager.m.playerCamera.transform.position.y > currentMaxHeight)
         {
             finished = true;
         }
     }
 
-    void Generate(int level)
+    public void Reset()
     {
-        obstacles.Add(SpawnLevel(level).GetComponent<Obstacle>());
+        UpdateHeight();
+        running = false;
+        finished = false;
+        Vector3 oldPlayerPosition = Manager.m.playerController.playerObject.transform.position;
+        playerSpace.localPosition = new Vector3(0, currentMinHeight, 0);
+        Manager.m.playerController.playerObject.transform.position = oldPlayerPosition;
     }
 
-    GameObject SpawnSimple()
+
+    void UpdateHeight()
     {
-        GameObject o = Instantiate(squareSample);
-        float yPos = cam.orthographicSize * 1.5f; //a little over top side
-        float xPos = -cam.orthographicSize * cam.aspect + Random.Range(0f, cam.orthographicSize * cam.aspect * 2);
-        o.transform.position = new Vector2(xPos, yPos);
-        return o;
+        currentMaxHeight = 0;
+        currentMinHeight = 0;
+        for (int i = 0; i < Manager.m.gameplayManager.currentLevel; i++) currentMaxHeight += levelList[i].height;
+        for (int i = 0; i < Manager.m.gameplayManager.currentLevel - 1; i++) currentMinHeight += levelList[i].height;
     }
 
-    GameObject SpawnLevel(int level)
+    public float GetCurrentMinHeight()
     {
-        GameObject o = Instantiate(levels[level - 1], Vector2.zero, new Quaternion(0,0,0,0));
-        o.transform.position = Vector2.zero;
-        o.SetActive(true);
-        return o;
+        return currentMinHeight;
     }
+    public float GetCurrentMaxHeight()
+    {
+        return currentMaxHeight;
+    }
+}
 
-    void Reset()
-    {
-        while(obstacles.Count > 0)
-        {
-            GameObject o = obstacles[0].gameObject;
-            obstacles.RemoveAt(0);
-            Destroy(o);
-        }
-    }
+[Serializable]
+public class Level
+{
+    public float height;
+    public float speed;
 }
