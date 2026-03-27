@@ -43,7 +43,7 @@ public class PlayerController : MonoBehaviour
     {
         CollisionDetection();
         MoveToTarget();
-        UpdateGeneralMovement();
+        UpdateCameraMovement();
     }
 
     void UpdateTarget()
@@ -109,7 +109,7 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    void UpdateGeneralMovement()
+    void UpdateCameraMovement()
     {
         Manager.m.playerCamera.gameObject.transform.Translate(Vector3.up * Time.fixedDeltaTime * currentGeneralSpeed);
     }

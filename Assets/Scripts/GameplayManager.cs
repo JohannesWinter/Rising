@@ -26,8 +26,12 @@ public class GameplayManager : MonoBehaviour
     public float playerDisappearDuration;
     public float playerReappearDuration;
     public float playerReapperWaitTime;
+    public float headlineDisappearSpeed;
+    public float headlineReappearSpeed;
 
     public GameState currentState;
+
+    bool showText;
     float points = 0;
     void Start()
     {
@@ -44,8 +48,8 @@ public class GameplayManager : MonoBehaviour
         {
             Time.timeScale = 1;
             pointsPanel.gameObject.SetActive(false);
-            levelPanel.gameObject.SetActive(true);
-            levelDisplay.text = "Level " + currentLevel;
+            showText = true;
+            levelDisplay.text = Manager.m.worldBuilder.levelList[currentLevel - 1].name;
             if (Input.GetButtonDown("Fire1"))
             {
                 StartGame();
@@ -53,6 +57,7 @@ public class GameplayManager : MonoBehaviour
         }
         else if (currentState == GameState.Running)
         {
+            showText = false;
             Time.timeScale = currentTimeScale;
             if (PlayerOutOfBounds() || Manager.m.playerController.dead)
             {
@@ -82,6 +87,7 @@ public class GameplayManager : MonoBehaviour
         {
             Time.timeScale = currentTimeScale;
         }
+        UpdateHeadline();
     }
 
     void StartGame()
@@ -90,7 +96,6 @@ public class GameplayManager : MonoBehaviour
         Manager.m.worldBuilder.finished = false;
         currentState = GameState.Running;
         points = 0;
-        levelPanel.gameObject.SetActive(false);
         pointsPanel.gameObject.SetActive(true);
     }
 
@@ -138,6 +143,20 @@ public class GameplayManager : MonoBehaviour
         return false;
     }
 
+    void UpdateHeadline()
+    {
+        if (levelDisplay.color.a < 1 && showText == true)
+        {
+            if (headlineReappearSpeed == 0) levelDisplay.color = new Color(levelDisplay.color.r, levelDisplay.color.g, levelDisplay.color.b, 1);
+            else levelDisplay.color = new Color(levelDisplay.color.r, levelDisplay.color.g, levelDisplay.color.b, levelDisplay.color.a + Time.unscaledDeltaTime / headlineReappearSpeed);
+        }
+        else if (levelDisplay.color.a > 0 && showText == false)
+        {
+            if (headlineDisappearSpeed == 0) levelDisplay.color = new Color(levelDisplay.color.r, levelDisplay.color.g, levelDisplay.color.b, 0);
+            else levelDisplay.color = new Color(levelDisplay.color.r, levelDisplay.color.g, levelDisplay.color.b, levelDisplay.color.a - Time.unscaledDeltaTime / headlineDisappearSpeed);
+        }
+    }
+
     public IEnumerator ResetCamera()
     {
         currentState = GameState.Resetting;
@@ -180,6 +199,7 @@ public class GameplayManager : MonoBehaviour
                 playerSpr.color = new Color(playerSpr.color.r, playerSpr.color.g, playerSpr.color.b, 1 - Mathf.Max(0, currentDuration / playerDisappearDuration));
                 playerTrf.localScale = playerSize * (1 - currentDuration / playerDisappearDuration);
                 playerLight.intensity = playerLightIntensity * (1 - currentDuration / playerDisappearDuration * 2);
+                if (playerLight.intensity < 0) playerLight.intensity = 0;
             }
             yield return null;
         }

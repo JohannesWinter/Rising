@@ -8,10 +8,12 @@ using UnityEngine;
 public class Worldbuilder : MonoBehaviour
 {
     public Transform playerSpace;
-    public GameObject squareSample;
+    public float slowDownCameraDistance;
+    public float minEndCameraSpeed;
 
     public bool running;
     public bool finished;
+
 
     float currentMaxHeight;
     float currentMinHeight;
@@ -26,7 +28,13 @@ public class Worldbuilder : MonoBehaviour
     {
         if (running)
         {
-            Manager.m.playerController.currentGeneralSpeed = levelList[Manager.m.gameplayManager.currentLevel - 1].speed;
+            float currentLevelSpeed = levelList[Manager.m.gameplayManager.currentLevel - 1].speed;
+            float distanceFromFinish = Mathf.Abs(currentMaxHeight - Manager.m.playerCamera.transform.localPosition.y);
+            if (distanceFromFinish < slowDownCameraDistance)
+            {
+                currentLevelSpeed = Mathf.Max((distanceFromFinish / slowDownCameraDistance) * levelList[Manager.m.gameplayManager.currentLevel - 1].speed, minEndCameraSpeed);
+            }
+            Manager.m.playerController.currentGeneralSpeed = currentLevelSpeed; 
             UpdateHeight();
         }
         else
@@ -74,4 +82,5 @@ public class Level
 {
     public float height;
     public float speed;
+    public string name;
 }
