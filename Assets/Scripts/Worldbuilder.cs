@@ -54,12 +54,14 @@ public class Worldbuilder : MonoBehaviour
         running = false;
         finished = false;
         Vector3 oldPlayerPosition = Manager.m.playerController.playerObject.transform.position;
+        Vector3 oldCameraPosition = Manager.m.playerCamera.transform.position;
         playerSpace.localPosition = new Vector3(0, currentMinHeight, 0);
         Manager.m.playerController.playerObject.transform.position = oldPlayerPosition;
+        Manager.m.playerCamera.transform.position = oldCameraPosition;
     }
 
 
-    void UpdateHeight()
+    public void UpdateHeight()
     {
         currentMaxHeight = 0;
         currentMinHeight = 0;

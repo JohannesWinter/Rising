@@ -16,11 +16,13 @@ public class GameplayManager : MonoBehaviour
 
     public GameObject levelPanel;
     public TextMeshProUGUI levelDisplay;
+    public HealthDisplay healthDisplay;
 
     public GameObject levelStopMenu;
     public Button levelCancelButton;
     public int currentTimeScale;
     public int currentLevel;
+    public int currentHealth;
     public float cameraResetSpeed;
     public float maxCameraResetTime;
     public float playerDisappearDuration;
@@ -88,6 +90,7 @@ public class GameplayManager : MonoBehaviour
             Time.timeScale = currentTimeScale;
         }
         UpdateHeadline();
+        UpdateHealthDisplay();
     }
 
     void StartGame()
@@ -101,9 +104,18 @@ public class GameplayManager : MonoBehaviour
 
     void Fail()
     {
+        currentState = GameState.Resetting;
+        if (currentLevel > 1)
+        {
+            currentHealth -= 1;
+            if (currentHealth < 0)
+            {
+                currentHealth = 3;
+                currentLevel -= 1;
+            }
+        }
         Manager.m.playerController.dead = false;
         Manager.m.worldBuilder.Reset();
-        currentState = GameState.Resetting;
         StartCoroutine(ResetCamera());
         levelStopMenu.SetActive(false);
     }
@@ -115,6 +127,7 @@ public class GameplayManager : MonoBehaviour
         currentState = GameState.Menu;
         Manager.m.playerCamera.transform.localPosition = new Vector3(0,0,-10);
         levelStopMenu.SetActive(false);
+        currentHealth = 3;
     }
     void Stop()
     {
@@ -154,6 +167,22 @@ public class GameplayManager : MonoBehaviour
         {
             if (headlineDisappearSpeed == 0) levelDisplay.color = new Color(levelDisplay.color.r, levelDisplay.color.g, levelDisplay.color.b, 0);
             else levelDisplay.color = new Color(levelDisplay.color.r, levelDisplay.color.g, levelDisplay.color.b, levelDisplay.color.a - Time.unscaledDeltaTime / headlineDisappearSpeed);
+        }
+    }
+
+    void UpdateHealthDisplay()
+    {
+        healthDisplay.testHealth = currentHealth;
+        healthDisplay.testMaxHealth = 3;
+        if (healthDisplay.publicAlpha < 1 && showText == true)
+        {
+            if (headlineReappearSpeed == 0) healthDisplay.publicAlpha = 1;
+            else healthDisplay.publicAlpha += Time.unscaledDeltaTime / headlineReappearSpeed;
+        }
+        if (healthDisplay.publicAlpha > 0 && showText == false)
+        {
+            if (headlineDisappearSpeed == 0) healthDisplay.publicAlpha = 0;
+            else healthDisplay.publicAlpha -= Time.unscaledDeltaTime / headlineDisappearSpeed;
         }
     }
 
