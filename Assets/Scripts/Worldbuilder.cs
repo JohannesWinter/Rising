@@ -29,7 +29,7 @@ public class Worldbuilder : MonoBehaviour
         if (running)
         {
             float currentLevelSpeed = levelList[Manager.m.gameplayManager.currentLevel - 1].speed;
-            float distanceFromFinish = Mathf.Abs(currentMaxHeight - Manager.m.playerCamera.transform.localPosition.y);
+            float distanceFromFinish = Mathf.Abs(currentMaxHeight - Manager.m.playerCamera.transform.position.y);
             if (distanceFromFinish < slowDownCameraDistance)
             {
                 currentLevelSpeed = Mathf.Max((distanceFromFinish / slowDownCameraDistance) * levelList[Manager.m.gameplayManager.currentLevel - 1].speed, minEndCameraSpeed);

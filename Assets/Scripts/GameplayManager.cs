@@ -36,7 +36,7 @@ public class GameplayManager : MonoBehaviour
     void Start()
     {
         currentState = GameState.Menu;
-        currentLevel = 1;
+        //currentLevel = 1;
         levelCancelButton.onClick.AddListener(Fail);
         levelStopMenu.SetActive(false);
     }
@@ -204,7 +204,7 @@ public class GameplayManager : MonoBehaviour
             yield return null;
         }
         cam.transform.position = aimPosition;
-        Manager.m.playerController.playerObject.transform.localPosition = new Vector3(0, 0, 0);
+        Manager.m.playerController.playerObject.transform.localPosition = new Vector3(0, 0, -1);
 
         float currentReappearDuration = 0;
 
