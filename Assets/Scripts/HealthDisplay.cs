@@ -14,8 +14,8 @@ public class HealthDisplay : MonoBehaviour
     public float lowLifeVibrateHz;
     float lowLifeVibrateValue;
 
-    public int testHealth;
-    public int testMaxHealth;
+    public int publicHealth;
+    public int publicMaxHealth;
 
     public float publicAlpha;
     // Start is called before the first frame update
@@ -27,9 +27,9 @@ public class HealthDisplay : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (testHealth != currentDisplayedHealth || testMaxHealth != currentDisplayedMaxHealth)
+        if (publicHealth != currentDisplayedHealth || publicMaxHealth != currentDisplayedMaxHealth)
         {
-            UpdateHealth(testHealth, testMaxHealth);
+            UpdateHealth(publicHealth, publicMaxHealth);
         }
         for (int i = 0; i < currentDisplayedMaxHealth; i++)
         {

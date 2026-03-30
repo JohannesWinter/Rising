@@ -172,8 +172,11 @@ public class GameplayManager : MonoBehaviour
 
     void UpdateHealthDisplay()
     {
-        healthDisplay.testHealth = currentHealth;
-        healthDisplay.testMaxHealth = 3;
+        if (currentState != GameState.Resetting)
+        {
+            healthDisplay.publicHealth = currentHealth;
+        }
+        healthDisplay.publicMaxHealth = 3;
         if (healthDisplay.publicAlpha < 1 && showText == true)
         {
             if (headlineReappearSpeed == 0) healthDisplay.publicAlpha = 1;
@@ -212,7 +215,7 @@ public class GameplayManager : MonoBehaviour
             
             float percentageDistance = a / (a + b);
 
-            if (percentageDistance > 0.999) break;
+            if (percentageDistance > 0.999 || percentageDistance.Equals(float.NaN)) break;
 
             cam.transform.position = startPosition + aimVector * percentageDistance;
 
