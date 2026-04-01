@@ -60,7 +60,7 @@ public class CrushDetector : MonoBehaviour
 
     private void OnCrushed(float depth, int colliders)
     {
-        Debug.Log($"CRUSHED! Depth: {depth}, Colliders: {colliders}");
+        //Debug.Log($"CRUSHED! Depth: {depth}, Colliders: {colliders}");
         Manager.m.playerController.dead = true;
 
     }

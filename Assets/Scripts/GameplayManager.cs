@@ -56,7 +56,11 @@ public class GameplayManager : MonoBehaviour
             {
                 StartGame();
             }
-            Manager.m.playerController.dead = false;
+            if (Manager.m.playerController.dead || PlayerOutOfBounds())
+            {
+                Manager.m.playerController.dead = false;
+                Fail();
+            }
         }
         else if (currentState == GameState.Running)
         {
@@ -101,6 +105,9 @@ public class GameplayManager : MonoBehaviour
         currentState = GameState.Running;
         points = 0;
         pointsPanel.gameObject.SetActive(true);
+
+        foreach (ObstacleTypedata obs in Manager.m.obstacleTypeDatasResetOnLevelStart) obs.ResetObstacle();
+        foreach (ObstacleTypedata obs in Manager.m.obstacleTypeDatasStopInMenu) obs.Continue();
     }
 
     void Fail()
@@ -129,6 +136,7 @@ public class GameplayManager : MonoBehaviour
         Manager.m.playerCamera.transform.localPosition = new Vector3(0,0,-10);
         levelStopMenu.SetActive(false);
         currentHealth = 3;
+        foreach (ObstacleTypedata obs in Manager.m.obstacleTypeDatasStopInMenu) obs.Stop();
     }
     void Stop()
     {
@@ -257,7 +265,10 @@ public class GameplayManager : MonoBehaviour
         playerLight.intensity = playerLightIntensity;
 
         yield return new WaitForSecondsRealtime(playerReapperWaitTime);
+        foreach (ObstacleTypedata obs in Manager.m.obstacleTypeDatasStopInMenu) obs.Stop();
+        Manager.m.playerController.dead = false;
         currentState = GameState.Menu;
+        
     }
 }
 

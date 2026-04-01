@@ -12,32 +12,48 @@ public class ObstacleTypedata : MonoBehaviour
     public ObstacleCollisionType collisionType;
     public ObstacleAgilityType agilityType;
     public Rigidbody2D rb;
+    public float startDelay;
+    public bool resetOnLevelStart;
+    public bool stopInMenu;
 
     Vector3 startPosition;
     Vector3 startScale;
     Vector3 startRotation;
 
+    [Header("MOVING")]
     public List<ObstacleMovementTarget> MOVING_movementTargets;
+    public ObstacleTriggerType triggerType;
+    public List<Collider2D> colliders;
+    bool triggerd = false;
+    bool singleUsed = false;
+    int nextTargetEntry;
+    ObstacleMovementTarget currentTarget;
+
+    [Header("PUSHABLE")]
     public List<PushableLine> PUSH_pushableLines;
+    float MinLineConnectDistance = 0.1f;
+
+    [Header("AIR")]
     public AirFlow AIR_airFlow;
+    float lastFixedUpdatePercentageAirStrength;
+
+    [Header("PORTAL")]
     public PortalData PORTAL_portalData;
 
 
-    int nextTargetEntry;
-    ObstacleMovementTarget currentTarget;
-    float lastFixedUpdatePercentageAirStrength;
-
-    float MinLineConnectDistance = 0.1f;
+    bool stopped;
+    float currentDelay;
 
 
-    void Start()
+
+    void Awake()
     {
+        startPosition = transform.position;
+        startScale = transform.localScale;
+        startRotation = transform.rotation.eulerAngles;
+        currentDelay = startDelay;
         if (agilityType == ObstacleAgilityType.Moving)
         {
-            startPosition = transform.position;
-            startScale = transform.localScale;
-            startRotation = transform.rotation.eulerAngles;
-            currentTarget = MOVING_movementTargets[0];
             nextTargetEntry = 0;
         }
         for (int i = 0; i < PUSH_pushableLines.Count; i++)
@@ -74,18 +90,38 @@ public class ObstacleTypedata : MonoBehaviour
         {
             rb = gameObject.GetComponent<Rigidbody2D>();
         }
+        if (stopInMenu) stopped = true;
     }
 
     void FixedUpdate()
     {
+        if (currentDelay > 0)
+        {
+            currentDelay -= Time.fixedDeltaTime;
+            return;
+        }
         if (agilityType == ObstacleAgilityType.Moving)
         {
-            SetTarget();
-            MoveSelf();
+            if (!stopped)
+            {
+                SetTarget();
+                if (currentTarget != null) MoveSelf();
+            }
+            else
+            {
+                rb.velocity = Vector3.zero;
+            }
         }
         if (agilityType == ObstacleAgilityType.Push)
         {
-            CorrectPush();
+            if (!stopped)
+            {
+                CorrectPush();
+            }
+            else
+            {
+                rb.velocity = Vector3.zero;
+            }
         }
         if (collisionType == ObstacleCollisionType.Air)
         {
@@ -93,24 +129,102 @@ public class ObstacleTypedata : MonoBehaviour
         }
     }
 
+    public void ResetObstacle()
+    {
+        transform.position = startPosition;
+        transform.localScale = startScale;
+        transform.rotation = Quaternion.Euler(startRotation);
+        triggerd = false;
+        singleUsed = false;
+        currentDelay = startDelay;
+        if (agilityType == ObstacleAgilityType.Moving)
+        {
+            nextTargetEntry = 0;
+            currentTarget = null;
+        }
+        if (collisionType == ObstacleCollisionType.Air)
+        {
+            lastFixedUpdatePercentageAirStrength = 0;
+        }
+    }
+    public void Stop()
+    {
+        stopped = true;
+    }
+    public void Continue()
+    {
+        stopped = false;
+    }
+
     void SetTarget()
     {
-        if (currentTarget == null || (currentTarget.remainingDuration <= 0))
+        if (currentTarget == null)
         {
+            if (triggerType == ObstacleTriggerType.Repeat)
+            {
+                triggerd = true;
+            }
+            else if (triggerType == ObstacleTriggerType.Single)
+            {
+                if (singleUsed == false)
+                {
+                    singleUsed = true;
+                    triggerd = true;
+                }
+            }
+            else if (triggerType == ObstacleTriggerType.ColliderRepeat)
+            {
+                triggerd = CheckColliderList(colliders);
+            }
+            else if (triggerType == ObstacleTriggerType.ColliderSingle)
+            {
+                if (singleUsed == false && CheckColliderList(colliders))
+                {
+                    singleUsed = true;
+                    triggerd = true;
+                }
+            }
+            else if (triggerType == ObstacleTriggerType.ThirdParty)
+            {
+                //other component
+            }
+        }
+        if (currentTarget == null && triggerd)
+        {
+            triggerd = false;
+            string targetStr = JsonUtility.ToJson(MOVING_movementTargets[0]);
+            currentTarget = JsonUtility.FromJson<ObstacleMovementTarget>(targetStr);
+            currentTarget.startPosition = transform.position;
+            currentTarget.startRotation = transform.rotation.eulerAngles;
+            currentTarget.startScale = transform.localScale;
+            currentTarget.remainingDuration = currentTarget.duration;
+            nextTargetEntry = 1;
+        }
+        if (currentTarget != null && currentTarget.remainingDuration < 0)
+        {
+            transform.position = currentTarget.startPosition + currentTarget.relativePosition;
+            transform.rotation = Quaternion.Euler(currentTarget.startRotation + currentTarget.relativeRotation);
+            transform.localScale = currentTarget.startScale + currentTarget.relativeScale;
+
             if (nextTargetEntry >= MOVING_movementTargets.Count)
             {
                 nextTargetEntry = 0;
                 transform.position = startPosition;
                 transform.rotation = Quaternion.Euler(startRotation);
                 transform.localScale = startScale;
+                currentTarget = null;
+                rb.velocity = Vector3.zero;
             }
-            string targetStr = JsonUtility.ToJson(MOVING_movementTargets[nextTargetEntry]);
-            currentTarget = JsonUtility.FromJson<ObstacleMovementTarget>(targetStr);
-            currentTarget.startPosition = transform.position;
-            currentTarget.startRotation = transform.rotation.eulerAngles;
-            currentTarget.startScale = transform.localScale;
-            currentTarget.remainingDuration = currentTarget.duration;
-            nextTargetEntry++;
+            else
+            {
+                string targetStr = JsonUtility.ToJson(MOVING_movementTargets[nextTargetEntry]);
+                currentTarget = JsonUtility.FromJson<ObstacleMovementTarget>(targetStr);
+                currentTarget.startPosition = transform.position;
+                currentTarget.startRotation = transform.rotation.eulerAngles;
+                currentTarget.startScale = transform.localScale;
+                currentTarget.remainingDuration = currentTarget.duration;
+                nextTargetEntry++;
+            }
         }
     }
 
@@ -247,6 +361,55 @@ public class ObstacleTypedata : MonoBehaviour
         lastFixedUpdatePercentageAirStrength = AIR_airFlow.AIR_currentPercentageAirStrength;
     }
 
+    bool CheckColliderList(List<Collider2D> colliders)
+    {
+        ContactPoint2D[] contactBuffer = new ContactPoint2D[16];
+        Collider2D[] overlapBuffer = new Collider2D[16];
+
+        foreach (var col in colliders)
+        {
+            if (col == null)
+                continue;
+
+            int myLayer = col.gameObject.layer;
+
+            int collisionMask = Physics2D.GetLayerCollisionMask(myLayer);
+
+            int contactCount = col.GetContacts(contactBuffer);
+
+            for (int i = 0; i < contactCount; i++)
+            {
+                Collider2D other = contactBuffer[i].collider;
+                if (other == null)
+                    continue;
+
+                int otherLayer = other.gameObject.layer;
+
+                if ((collisionMask & (1 << otherLayer)) != 0)
+                    return true;
+            }
+
+            ContactFilter2D filter = new ContactFilter2D();
+            filter.useLayerMask = true;
+            filter.layerMask = collisionMask;
+            filter.useTriggers = true;
+
+            int overlapCount = col.OverlapCollider(filter, overlapBuffer);
+
+            for (int i = 0; i < overlapCount; i++)
+            {
+                Collider2D other = overlapBuffer[i];
+
+                if (other == null || other == col)
+                    continue;
+
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     Vector3 GetClosestPointOnLine(Vector3 point, Vector3 linePoint1, Vector3 linePoint2)
     {
         Vector3 u = linePoint2 - linePoint1;   // (B - A)
@@ -331,6 +494,15 @@ public enum Relativity
 {
     Relative,
     Absolute,
+}
+
+public enum ObstacleTriggerType
+{
+    Repeat,
+    Single,
+    ColliderRepeat,
+    ColliderSingle,
+    ThirdParty,
 }
 
 
