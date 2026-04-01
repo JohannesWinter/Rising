@@ -41,6 +41,17 @@ public class PlayerController : MonoBehaviour
 
     void FixedUpdate()
     {
+        if (Manager.m.gameplayManager.currentState == GameState.Resetting)
+        {
+            this.GetComponent<Collider2D>().enabled = false;
+            rb.velocity = Vector3.zero;
+            rb.isKinematic = true;
+        }
+        else
+        {
+            this.GetComponent<Collider2D>().enabled = true;
+            rb.isKinematic = false;
+        }
         CollisionDetection();
         MoveToTarget();
         UpdateCameraMovement();

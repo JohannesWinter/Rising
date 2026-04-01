@@ -56,6 +56,7 @@ public class GameplayManager : MonoBehaviour
             {
                 StartGame();
             }
+            Manager.m.playerController.dead = false;
         }
         else if (currentState == GameState.Running)
         {
@@ -224,6 +225,7 @@ public class GameplayManager : MonoBehaviour
                 playerSpr.color = new Color(playerSpr.color.r, playerSpr.color.g, playerSpr.color.b, 1 - percentageDuration);
                 playerTrf.localScale = playerSize * (1 - percentageDuration);
                 playerLight.intensity = playerLightIntensity * (1 - percentageDuration * 2);
+                if (playerLight.intensity < 0) playerLight.intensity = 0;
             }
  
             else

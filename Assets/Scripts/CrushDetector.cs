@@ -1,80 +1,73 @@
 using UnityEngine;
 using System.Collections.Generic;
 
-[RequireComponent(typeof(Rigidbody2D))]
+[RequireComponent(typeof(Collider2D))]
 public class CrushDetector : MonoBehaviour
 {
+    [Header("Detection")]
+    public float checkRadius = 0.1f;
+    public LayerMask solidLayers;
+
     [Header("Crush Settings")]
-    public float crushImpulseThreshold = 8f;
-    public float opposingDotThreshold = -0.5f;
+    public float crushDepthThreshold = 0.15f;
+    public int minColliderCount = 2;
 
-    private Rigidbody2D rb;
+    private Collider2D selfCollider;
 
-    private struct ContactData
-    {
-        public Vector2 normal;
-        public float relativeSpeed;
-    }
-
-    private readonly List<ContactData> frameContacts = new List<ContactData>();
+    private readonly Collider2D[] results = new Collider2D[16];
 
     void Awake()
     {
-        rb = GetComponent<Rigidbody2D>();
+        selfCollider = GetComponent<Collider2D>();
     }
 
-    void OnCollisionStay2D(Collision2D collision)
-    {
-        float speed = collision.relativeVelocity.magnitude;
-
-        for (int i = 0; i < collision.contactCount; i++)
-        {
-            ContactPoint2D c = collision.GetContact(i);
-
-            frameContacts.Add(new ContactData
-            {
-                normal = c.normal,
-                relativeSpeed = speed
-            });
-        }
-    }
-
-    // 2. Einmal pro Physik-Frame auswerten
     void FixedUpdate()
     {
-        print(frameContacts.Count);
-        if (frameContacts.Count == 0)
+        int count = Physics2D.OverlapCircleNonAlloc(
+            transform.position,
+            checkRadius,
+            results,
+            solidLayers
+        );
+
+        if (count == 0)
             return;
+        float totalPenetration = 0f;
+        int validHits = 0;
 
-        bool hasOpposing = false;
-        float maxPressure = 0f;
-
-        // Druck grob über relative Geschwindigkeit + Anzahl Kontakte
-        for (int i = 0; i < frameContacts.Count; i++)
+        for (int i = 0; i < count; i++)
         {
-            maxPressure = Mathf.Max(maxPressure, frameContacts[i].relativeSpeed);
+            Collider2D other = results[i];
 
-            for (int j = i + 1; j < frameContacts.Count; j++)
+            if (other == selfCollider)
+                continue;
+
+            ColliderDistance2D dist = Physics2D.Distance(selfCollider, other);
+
+            if (dist.isOverlapped)
             {
-                float dot = Vector2.Dot(frameContacts[i].normal, frameContacts[j].normal);
-
-                if (dot < opposingDotThreshold)
-                {
-                    hasOpposing = true;
-                }
+                float penetrationDepth = -dist.distance;
+                totalPenetration += penetrationDepth;
+                validHits++;
             }
         }
 
-        if (hasOpposing && maxPressure >= crushImpulseThreshold)
+        if (validHits >= minColliderCount && totalPenetration > crushDepthThreshold)
         {
-            OnCrushed(maxPressure);
+            OnCrushed(totalPenetration, validHits);
         }
-
-        frameContacts.Clear();
     }
 
-    private void OnCrushed(float force)
+    private void OnCrushed(float depth, int colliders)
     {
-        Debug.Log($"CRUSHED detected! Pressure: {force}");
+        Debug.Log($"CRUSHED! Depth: {depth}, Colliders: {colliders}");
+        Manager.m.playerController.dead = true;
+
+    }
+
+    void OnDrawGizmosSelected()
+    {
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireSphere(transform.position, checkRadius);
     }
 }

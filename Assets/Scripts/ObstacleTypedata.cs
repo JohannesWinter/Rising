@@ -70,6 +70,10 @@ public class ObstacleTypedata : MonoBehaviour
                 PORTAL_portalData.position += new Vector2(transform.position.x, transform.position.y);
             }
         }
+        if (rb == null)
+        {
+            rb = gameObject.GetComponent<Rigidbody2D>();
+        }
     }
 
     void FixedUpdate()
