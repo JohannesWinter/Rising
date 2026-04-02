@@ -11,6 +11,7 @@ public class ObstacleTypedata : MonoBehaviour
 {
     public ObstacleCollisionType collisionType;
     public ObstacleAgilityType agilityType;
+    public ObstacleSpace obstacleSpace;
     public Rigidbody2D rb;
     public float startDelay;
     public bool resetOnLevelStart;
@@ -48,9 +49,18 @@ public class ObstacleTypedata : MonoBehaviour
 
     void Awake()
     {
-        startPosition = transform.position;
-        startScale = transform.localScale;
-        startRotation = transform.rotation.eulerAngles;
+        if (obstacleSpace == ObstacleSpace.World)
+        {
+            startPosition = transform.position;
+            startScale = transform.localScale;
+            startRotation = transform.rotation.eulerAngles;
+        }
+        else
+        {
+            startPosition = transform.localPosition;
+            startScale = transform.localScale;
+            startRotation = transform.localRotation.eulerAngles;
+        }
         currentDelay = startDelay;
         if (agilityType == ObstacleAgilityType.Moving)
         {
@@ -194,23 +204,47 @@ public class ObstacleTypedata : MonoBehaviour
             triggerd = false;
             string targetStr = JsonUtility.ToJson(MOVING_movementTargets[0]);
             currentTarget = JsonUtility.FromJson<ObstacleMovementTarget>(targetStr);
-            currentTarget.startPosition = transform.position;
-            currentTarget.startRotation = transform.rotation.eulerAngles;
+            if (obstacleSpace == ObstacleSpace.World)
+            {
+                currentTarget.startPosition = transform.position;
+                currentTarget.startRotation = transform.rotation.eulerAngles;
+            }
+            else
+            {
+                currentTarget.startPosition = transform.localPosition;
+                currentTarget.startRotation = transform.localRotation.eulerAngles;
+            }
             currentTarget.startScale = transform.localScale;
             currentTarget.remainingDuration = currentTarget.duration;
             nextTargetEntry = 1;
         }
         if (currentTarget != null && currentTarget.remainingDuration < 0)
         {
-            transform.position = currentTarget.startPosition + currentTarget.relativePosition;
-            transform.rotation = Quaternion.Euler(currentTarget.startRotation + currentTarget.relativeRotation);
+            if (obstacleSpace == ObstacleSpace.World)
+            {
+                transform.position = currentTarget.startPosition + currentTarget.relativePosition;
+                transform.rotation = Quaternion.Euler(currentTarget.startRotation + currentTarget.relativeRotation);
+            }
+            else
+            {
+                transform.localPosition = currentTarget.startPosition + currentTarget.relativePosition;
+                transform.localRotation = Quaternion.Euler(currentTarget.startRotation + currentTarget.relativeRotation);
+            }
             transform.localScale = currentTarget.startScale + currentTarget.relativeScale;
 
             if (nextTargetEntry >= MOVING_movementTargets.Count)
             {
                 nextTargetEntry = 0;
-                transform.position = startPosition;
-                transform.rotation = Quaternion.Euler(startRotation);
+                if (obstacleSpace == ObstacleSpace.World)
+                {
+                    transform.position = startPosition;
+                    transform.rotation = Quaternion.Euler(startRotation);
+                }
+                else
+                {
+                    transform.localPosition = startPosition;
+                    transform.localRotation = Quaternion.Euler(startRotation);
+                }
                 transform.localScale = startScale;
                 currentTarget = null;
                 rb.velocity = Vector3.zero;
@@ -219,8 +253,16 @@ public class ObstacleTypedata : MonoBehaviour
             {
                 string targetStr = JsonUtility.ToJson(MOVING_movementTargets[nextTargetEntry]);
                 currentTarget = JsonUtility.FromJson<ObstacleMovementTarget>(targetStr);
-                currentTarget.startPosition = transform.position;
-                currentTarget.startRotation = transform.rotation.eulerAngles;
+                if (obstacleSpace == ObstacleSpace.World)
+                {
+                    currentTarget.startPosition = transform.position;
+                    currentTarget.startRotation = transform.rotation.eulerAngles;
+                }
+                else
+                {
+                    currentTarget.startPosition = transform.localPosition;
+                    currentTarget.startRotation = transform.localRotation.eulerAngles;
+                }
                 currentTarget.startScale = transform.localScale;
                 currentTarget.remainingDuration = currentTarget.duration;
                 nextTargetEntry++;
@@ -235,39 +277,118 @@ public class ObstacleTypedata : MonoBehaviour
         UpdateVelocity(target, movement);
         UpdateTorque(target, movement);
     }
+    //public void UpdateVelocity(
+    //    Transform target,
+    //    ObstacleMovementTarget movement)
+    //{
+    //    float frameTime = Time.fixedDeltaTime;
+    //    float percentageTimeSpent = (movement.duration - movement.remainingDuration) / movement.duration;
+        
+    //    float percentagePosition = Evaluate(percentageTimeSpent, movement.relativePositionMovementType, movement.relativePositionMovementTypeStrength);
+    //    Vector3 aimPosition = movement.startPosition + movement.relativePosition * percentagePosition;
+
+    //    movement.remainingDuration -= frameTime;
+        
+    //    float distance = (aimPosition - target.position).magnitude;
+    //    float speed = distance * (1 / Time.fixedDeltaTime);
+    //    rb.velocity = (aimPosition - target.transform.position) * speed;
+    //}
+
     public void UpdateVelocity(
-        Transform target,
-        ObstacleMovementTarget movement)
+    Transform target,
+    ObstacleMovementTarget movement)
     {
         float frameTime = Time.fixedDeltaTime;
         float percentageTimeSpent = (movement.duration - movement.remainingDuration) / movement.duration;
-        
-        float percentagePosition = Evaluate(percentageTimeSpent, movement.relativePositionMovementType, movement.relativePositionMovementTypeStrength);
+
+        float percentagePosition = Evaluate(
+            percentageTimeSpent,
+            movement.relativePositionMovementType,
+            movement.relativePositionMovementTypeStrength
+        );
+
         Vector3 aimPosition = movement.startPosition + movement.relativePosition * percentagePosition;
 
         movement.remainingDuration -= frameTime;
-        
-        float distance = (aimPosition - target.position).magnitude;
-        float speed = distance * (1 / Time.fixedDeltaTime);
-        rb.velocity = (aimPosition - target.transform.position) * speed;
+
+        Vector3 delta;
+
+        if (obstacleSpace == ObstacleSpace.World)
+        {
+            delta = aimPosition - target.position;
+        }
+        else
+        {
+            Vector3 localDelta = aimPosition - target.localPosition;
+
+            if (target.parent != null)
+                delta = target.parent.TransformDirection(localDelta);
+            else
+                delta = localDelta;
+        }
+
+        float speed = delta.magnitude / Time.fixedDeltaTime;
+
+        if (delta.sqrMagnitude < 0.000001f)
+        {
+            rb.velocity = Vector2.zero;
+            return;
+        }
+
+        rb.velocity = delta.normalized * speed;
     }
+    //public void UpdateTorque(Transform target, ObstacleMovementTarget movement)
+    //{
+    //    float frameTime = Time.fixedDeltaTime;
+    //    float percentageTimeSpent = (movement.duration - movement.remainingDuration) / movement.duration;
+
+    //    float percentageRotation = Evaluate(percentageTimeSpent, movement.relativeRotationMovementType, movement.relativeRotationMovementTypeStrength);
+    //    float aimRotation = (movement.startRotation.z + movement.relativeRotation.z * percentageRotation) % 360;
+
+    //    movement.remainingDuration -= frameTime;
+
+    //    float actualDistanceAngle = Mathf.DeltaAngle(
+    //        target.transform.rotation.eulerAngles.z,
+    //        aimRotation
+    //    );
+
+    //    float speed = actualDistanceAngle * (1 / Time.fixedDeltaTime);
+    //    if (speed.Equals(float.NaN)) return;
+    //    rb.angularVelocity = speed;
+    //}
+
     public void UpdateTorque(Transform target, ObstacleMovementTarget movement)
     {
         float frameTime = Time.fixedDeltaTime;
         float percentageTimeSpent = (movement.duration - movement.remainingDuration) / movement.duration;
 
-        float percentageRotation = Evaluate(percentageTimeSpent, movement.relativeRotationMovementType, movement.relativeRotationMovementTypeStrength);
-        float aimRotation = (movement.startRotation.z + movement.relativeRotation.z * percentageRotation) % 360;
+        float percentageRotation = Evaluate(
+            percentageTimeSpent,
+            movement.relativeRotationMovementType,
+            movement.relativeRotationMovementTypeStrength
+        );
+
+        float aimRotation = (movement.startRotation.z + movement.relativeRotation.z * percentageRotation);
 
         movement.remainingDuration -= frameTime;
 
-        float actualDistanceAngle = Mathf.DeltaAngle(
-            target.transform.rotation.eulerAngles.z,
-            aimRotation
-        );
+        float currentRotation;
 
-        float speed = actualDistanceAngle * (1 / Time.fixedDeltaTime);
-        if (speed.Equals(float.NaN)) return;
+        if (obstacleSpace == ObstacleSpace.World)
+        {
+            currentRotation = target.rotation.eulerAngles.z;
+        }
+        else
+        {
+            currentRotation = target.localRotation.eulerAngles.z;
+        }
+
+        float delta = Mathf.DeltaAngle(currentRotation, aimRotation);
+
+        float speed = delta / Time.fixedDeltaTime;
+
+        if (float.IsNaN(speed)) return;
+
         rb.angularVelocity = speed;
     }
 
@@ -503,6 +624,11 @@ public enum ObstacleTriggerType
     ColliderRepeat,
     ColliderSingle,
     ThirdParty,
+}
+public enum ObstacleSpace
+{
+    World,
+    Local
 }
 
 
