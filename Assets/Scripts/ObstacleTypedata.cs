@@ -25,7 +25,7 @@ public class ObstacleTypedata : MonoBehaviour
     public List<ObstacleMovementTarget> MOVING_movementTargets;
     public ObstacleTriggerType triggerType;
     public List<Collider2D> colliders;
-    bool triggerd = false;
+    public bool triggerd = false;
     bool singleUsed = false;
     int nextTargetEntry;
     ObstacleMovementTarget currentTarget;
@@ -120,6 +120,7 @@ public class ObstacleTypedata : MonoBehaviour
             else
             {
                 rb.velocity = Vector3.zero;
+                rb.angularVelocity = 0;
             }
         }
         if (agilityType == ObstacleAgilityType.Push)
@@ -131,6 +132,7 @@ public class ObstacleTypedata : MonoBehaviour
             else
             {
                 rb.velocity = Vector3.zero;
+                rb.angularVelocity = 0;
             }
         }
         if (collisionType == ObstacleCollisionType.Air)
@@ -248,6 +250,7 @@ public class ObstacleTypedata : MonoBehaviour
                 transform.localScale = startScale;
                 currentTarget = null;
                 rb.velocity = Vector3.zero;
+                rb.angularVelocity = 0;
             }
             else
             {

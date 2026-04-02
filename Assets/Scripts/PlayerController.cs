@@ -52,7 +52,6 @@ public class PlayerController : MonoBehaviour
             this.GetComponent<Collider2D>().enabled = true;
             rb.isKinematic = false;
         }
-        CollisionDetection();
         MoveToTarget();
         UpdateCameraMovement();
     }
@@ -125,34 +124,44 @@ public class PlayerController : MonoBehaviour
         Manager.m.playerCamera.gameObject.transform.Translate(Vector3.up * Time.fixedDeltaTime * currentGeneralSpeed);
     }
 
-    void CollisionDetection()
-    {
-        currentAirPush = Vector2.zero;
-        Collider2D[] col = new Collider2D[5]; //5 = max detectable colliders
-        ContactFilter2D filter = new ContactFilter2D();
-        filter.useTriggers = true;
-        Physics2D.OverlapCollider(GetComponent<CircleCollider2D>(), filter, col);
-        for (int i = 0; i < col.Length; i++)
-        {
-            if (col[i] != null)
-            {
-                if (col[i].gameObject.GetComponent<ObstacleTypedata>())
-                {
-                    HandleObstacleCollision(col[i].gameObject.GetComponent<ObstacleTypedata>());
-                } 
-            }
-            else
-            {
-                break;
-            }
-        }
-    }
+    //void CollisionDetection()
+    //{
+    //    currentAirPush = Vector2.zero;
+    //    Collider2D[] col = new Collider2D[5]; //5 = max detectable colliders
+    //    ContactFilter2D filter = new ContactFilter2D();
+    //    filter.useTriggers = true;
+    //    Physics2D.OverlapCollider(GetComponent<CircleCollider2D>(), filter, col);
+    //    for (int i = 0; i < col.Length; i++)
+    //    {
+    //        if (col[i] != null)
+    //        {
+    //            if (col[i].gameObject.GetComponent<ObstacleTypedata>())
+    //            {
+    //                HandleObstacleCollision(col[i].gameObject.GetComponent<ObstacleTypedata>());
+    //            } 
+    //        }
+    //        else
+    //        {
+    //            break;
+    //        }
+    //    }
+    //}
 
     void OnTriggerEnter(Collider collision){
     }
 
+
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        if (collision.gameObject.GetComponent<ObstacleTypedata>())
+        {
+            HandleObstacleCollision(collision.gameObject.GetComponent<ObstacleTypedata>());
+        }
+    }
+
     void HandleObstacleCollision(ObstacleTypedata obs)
     {
+        print(obs.gameObject.name);
         if (Manager.m.gameplayManager.currentState == GameState.Running)
         {
             switch (obs.collisionType)
