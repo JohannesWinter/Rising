@@ -6,6 +6,7 @@ using Unity.VisualScripting;
 using UnityEditor.Rendering;
 using UnityEngine;
 using UnityEngine.Windows;
+using static UnityEditor.Experimental.GraphView.GraphView;
 
 public class ObstacleTypedata : MonoBehaviour
 {
@@ -29,6 +30,7 @@ public class ObstacleTypedata : MonoBehaviour
     bool singleUsed = false;
     int nextTargetEntry;
     ObstacleMovementTarget currentTarget;
+    public float speedMultiplier = 1;
 
     [Header("PUSHABLE")]
     public List<PushableLine> PUSH_pushableLines;
@@ -49,6 +51,7 @@ public class ObstacleTypedata : MonoBehaviour
 
     void Awake()
     {
+        currentTarget = null;
         if (obstacleSpace == ObstacleSpace.World)
         {
             startPosition = transform.position;
@@ -143,12 +146,25 @@ public class ObstacleTypedata : MonoBehaviour
 
     public void ResetObstacle()
     {
-        transform.position = startPosition;
+        if (obstacleSpace == ObstacleSpace.World)
+        {
+            transform.position = startPosition;
+            transform.rotation = Quaternion.Euler(startRotation);
+        }
+        else
+        {
+            transform.localPosition = startPosition;
+            transform.localRotation = Quaternion.Euler(startRotation);
+        }
         transform.localScale = startScale;
-        transform.rotation = Quaternion.Euler(startRotation);
         triggerd = false;
         singleUsed = false;
         currentDelay = startDelay;
+        if (rb != null)
+        {
+            rb.velocity = Vector3.zero;
+            rb.angularVelocity = 0;
+        }
         if (agilityType == ObstacleAgilityType.Moving)
         {
             nextTargetEntry = 0;
@@ -172,6 +188,8 @@ public class ObstacleTypedata : MonoBehaviour
     {
         if (currentTarget == null)
         {
+            rb.velocity = Vector3.zero;
+            rb.angularVelocity = 0;
             if (triggerType == ObstacleTriggerType.Repeat)
             {
                 triggerd = true;
@@ -234,6 +252,9 @@ public class ObstacleTypedata : MonoBehaviour
             }
             transform.localScale = currentTarget.startScale + currentTarget.relativeScale;
 
+            rb.velocity = Vector3.zero;
+            rb.angularVelocity = 0;
+
             if (nextTargetEntry >= MOVING_movementTargets.Count)
             {
                 nextTargetEntry = 0;
@@ -277,6 +298,7 @@ public class ObstacleTypedata : MonoBehaviour
     {
         Transform target = gameObject.transform;
         ObstacleMovementTarget movement = currentTarget;
+        movement.remainingDuration -= Time.fixedDeltaTime * speedMultiplier;
         UpdateVelocity(target, movement);
         UpdateTorque(target, movement);
     }
@@ -301,7 +323,6 @@ public class ObstacleTypedata : MonoBehaviour
     Transform target,
     ObstacleMovementTarget movement)
     {
-        float frameTime = Time.fixedDeltaTime;
         float percentageTimeSpent = (movement.duration - movement.remainingDuration) / movement.duration;
 
         float percentagePosition = Evaluate(
@@ -311,34 +332,43 @@ public class ObstacleTypedata : MonoBehaviour
         );
 
         Vector3 aimPosition = movement.startPosition + movement.relativePosition * percentagePosition;
-
-        movement.remainingDuration -= frameTime;
-
-        Vector3 delta;
-
+        if (aimPosition.x.Equals(float.NaN) || aimPosition.y.Equals(float.NaN))
+        {
+            rb.velocity = Vector3.zero;
+            return;
+        }
         if (obstacleSpace == ObstacleSpace.World)
         {
-            delta = aimPosition - target.position;
+            rb.MovePosition(aimPosition);
         }
         else
         {
-            Vector3 localDelta = aimPosition - target.localPosition;
-
-            if (target.parent != null)
-                delta = target.parent.TransformDirection(localDelta);
-            else
-                delta = localDelta;
+            rb.MovePosition(transform.parent.TransformPoint(aimPosition));
         }
 
-        float speed = delta.magnitude / Time.fixedDeltaTime;
+        //Vector3 delta;
 
-        if (delta.sqrMagnitude < 0.000001f)
-        {
-            rb.velocity = Vector2.zero;
-            return;
-        }
+        //if (obstacleSpace == ObstacleSpace.World)
+        //{
+        //    delta = aimPosition - target.position;
+        //}
+        //else
+        //{
+        //    Vector3 localDelta = aimPosition - target.localPosition;
 
-        rb.velocity = delta.normalized * speed;
+        //    if (target.parent != null)
+        //        delta = target.parent.TransformDirection(localDelta);
+        //    else
+        //        delta = localDelta;
+        //}
+        //float speed = delta.magnitude / Time.fixedDeltaTime;
+
+        //if (delta.sqrMagnitude < 0.000001f || (delta.normalized * speed).x.Equals(float.NaN) || (delta.normalized * speed).y.Equals(float.NaN))
+        //{
+        //    rb.velocity = Vector2.zero;
+        //    return;
+        //}
+        //rb.velocity = delta.normalized * speed;
     }
     //public void UpdateTorque(Transform target, ObstacleMovementTarget movement)
     //{
@@ -362,7 +392,6 @@ public class ObstacleTypedata : MonoBehaviour
 
     public void UpdateTorque(Transform target, ObstacleMovementTarget movement)
     {
-        float frameTime = Time.fixedDeltaTime;
         float percentageTimeSpent = (movement.duration - movement.remainingDuration) / movement.duration;
 
         float percentageRotation = Evaluate(
@@ -373,26 +402,38 @@ public class ObstacleTypedata : MonoBehaviour
 
         float aimRotation = (movement.startRotation.z + movement.relativeRotation.z * percentageRotation);
 
-        movement.remainingDuration -= frameTime;
-
-        float currentRotation;
-
+        if (aimRotation.Equals(float.NaN) || aimRotation.Equals(float.NaN))
+        {
+            rb.velocity = Vector3.zero;
+            return;
+        }
         if (obstacleSpace == ObstacleSpace.World)
         {
-            currentRotation = target.rotation.eulerAngles.z;
+            rb.MoveRotation(aimRotation);
         }
         else
         {
-            currentRotation = target.localRotation.eulerAngles.z;
+            rb.MoveRotation(aimRotation);
         }
 
-        float delta = Mathf.DeltaAngle(currentRotation, aimRotation);
+        //float currentRotation;
 
-        float speed = delta / Time.fixedDeltaTime;
+        //if (obstacleSpace == ObstacleSpace.World)
+        //{
+        //    currentRotation = target.rotation.eulerAngles.z;
+        //}
+        //else
+        //{
+        //    currentRotation = target.localRotation.eulerAngles.z;
+        //}
 
-        if (float.IsNaN(speed)) return;
+        //float delta = Mathf.DeltaAngle(currentRotation, aimRotation);
 
-        rb.angularVelocity = speed;
+        //float speed = delta / Time.fixedDeltaTime;
+
+        //if (float.IsNaN(speed)) return;
+
+        //rb.angularVelocity = speed;
     }
 
     void CorrectPush()

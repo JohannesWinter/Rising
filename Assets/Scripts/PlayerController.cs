@@ -161,7 +161,6 @@ public class PlayerController : MonoBehaviour
 
     void HandleObstacleCollision(ObstacleTypedata obs)
     {
-        print(obs.gameObject.name);
         if (Manager.m.gameplayManager.currentState == GameState.Running)
         {
             switch (obs.collisionType)
