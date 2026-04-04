@@ -236,6 +236,28 @@ public class ObstacleTypedata : MonoBehaviour
             }
             currentTarget.startScale = transform.localScale;
             currentTarget.remainingDuration = currentTarget.duration;
+            if (currentTarget.targetingTypePosition == ObstacleValueType.RandomBetween)
+            {
+                Vector3 min = currentTarget.relativePosition;
+                Vector3 max = currentTarget._relativePosition;
+
+                currentTarget.relativePosition = new Vector3(
+                    UnityEngine.Random.Range(Mathf.Min(min.x, max.x), Mathf.Max(min.x, max.x)),
+                    UnityEngine.Random.Range(Mathf.Min(min.y, max.y), Mathf.Max(min.y, max.y)),
+                    UnityEngine.Random.Range(Mathf.Min(min.z, max.z), Mathf.Max(min.z, max.z))
+                );
+            }
+            if (currentTarget.targetingTypeRotation == ObstacleValueType.RandomBetween)
+            {
+                Vector3 min = currentTarget.relativeRotation;
+                Vector3 max = currentTarget._relativeRotation;
+
+                currentTarget.relativeRotation = new Vector3(
+                    UnityEngine.Random.Range(Mathf.Min(min.x, max.x), Mathf.Max(min.x, max.x)),
+                    UnityEngine.Random.Range(Mathf.Min(min.y, max.y), Mathf.Max(min.y, max.y)),
+                    UnityEngine.Random.Range(Mathf.Min(min.z, max.z), Mathf.Max(min.z, max.z))
+                );
+            }
             nextTargetEntry = 1;
         }
         if (currentTarget != null && currentTarget.remainingDuration < 0)
@@ -288,7 +310,39 @@ public class ObstacleTypedata : MonoBehaviour
                     currentTarget.startRotation = transform.localRotation.eulerAngles;
                 }
                 currentTarget.startScale = transform.localScale;
+                if (currentTarget.durationType == ObstacleValueType.RandomBetween)
+                {
+                    float min = currentTarget.duration;
+                    float max = currentTarget._duration;
+
+                    currentTarget.duration = UnityEngine.Random.Range(
+                        Mathf.Min(min, max),
+                        Mathf.Max(min, max)
+                    );
+                }
                 currentTarget.remainingDuration = currentTarget.duration;
+                if (currentTarget.targetingTypePosition == ObstacleValueType.RandomBetween)
+                {
+                    Vector3 min = currentTarget.relativePosition;
+                    Vector3 max = currentTarget._relativePosition;
+
+                    currentTarget.relativePosition = new Vector3(
+                        UnityEngine.Random.Range(Mathf.Min(min.x, max.x), Mathf.Max(min.x, max.x)),
+                        UnityEngine.Random.Range(Mathf.Min(min.y, max.y), Mathf.Max(min.y, max.y)),
+                        UnityEngine.Random.Range(Mathf.Min(min.z, max.z), Mathf.Max(min.z, max.z))
+                    );
+                }
+                if (currentTarget.targetingTypeRotation == ObstacleValueType.RandomBetween)
+                {
+                    Vector3 min = currentTarget.relativeRotation;
+                    Vector3 max = currentTarget._relativeRotation;
+
+                    currentTarget.relativeRotation = new Vector3(
+                        UnityEngine.Random.Range(Mathf.Min(min.x, max.x), Mathf.Max(min.x, max.x)),
+                        UnityEngine.Random.Range(Mathf.Min(min.y, max.y), Mathf.Max(min.y, max.y)),
+                        UnityEngine.Random.Range(Mathf.Min(min.z, max.z), Mathf.Max(min.z, max.z))
+                    );
+                }
                 nextTargetEntry++;
             }
         }
@@ -345,50 +399,7 @@ public class ObstacleTypedata : MonoBehaviour
         {
             rb.MovePosition(transform.parent.TransformPoint(aimPosition));
         }
-
-        //Vector3 delta;
-
-        //if (obstacleSpace == ObstacleSpace.World)
-        //{
-        //    delta = aimPosition - target.position;
-        //}
-        //else
-        //{
-        //    Vector3 localDelta = aimPosition - target.localPosition;
-
-        //    if (target.parent != null)
-        //        delta = target.parent.TransformDirection(localDelta);
-        //    else
-        //        delta = localDelta;
-        //}
-        //float speed = delta.magnitude / Time.fixedDeltaTime;
-
-        //if (delta.sqrMagnitude < 0.000001f || (delta.normalized * speed).x.Equals(float.NaN) || (delta.normalized * speed).y.Equals(float.NaN))
-        //{
-        //    rb.velocity = Vector2.zero;
-        //    return;
-        //}
-        //rb.velocity = delta.normalized * speed;
     }
-    //public void UpdateTorque(Transform target, ObstacleMovementTarget movement)
-    //{
-    //    float frameTime = Time.fixedDeltaTime;
-    //    float percentageTimeSpent = (movement.duration - movement.remainingDuration) / movement.duration;
-
-    //    float percentageRotation = Evaluate(percentageTimeSpent, movement.relativeRotationMovementType, movement.relativeRotationMovementTypeStrength);
-    //    float aimRotation = (movement.startRotation.z + movement.relativeRotation.z * percentageRotation) % 360;
-
-    //    movement.remainingDuration -= frameTime;
-
-    //    float actualDistanceAngle = Mathf.DeltaAngle(
-    //        target.transform.rotation.eulerAngles.z,
-    //        aimRotation
-    //    );
-
-    //    float speed = actualDistanceAngle * (1 / Time.fixedDeltaTime);
-    //    if (speed.Equals(float.NaN)) return;
-    //    rb.angularVelocity = speed;
-    //}
 
     public void UpdateTorque(Transform target, ObstacleMovementTarget movement)
     {
@@ -413,27 +424,8 @@ public class ObstacleTypedata : MonoBehaviour
         }
         else
         {
-            rb.MoveRotation(aimRotation);
+            rb.MoveRotation(transform.parent.rotation * Quaternion.Euler(0,0,aimRotation));
         }
-
-        //float currentRotation;
-
-        //if (obstacleSpace == ObstacleSpace.World)
-        //{
-        //    currentRotation = target.rotation.eulerAngles.z;
-        //}
-        //else
-        //{
-        //    currentRotation = target.localRotation.eulerAngles.z;
-        //}
-
-        //float delta = Mathf.DeltaAngle(currentRotation, aimRotation);
-
-        //float speed = delta / Time.fixedDeltaTime;
-
-        //if (float.IsNaN(speed)) return;
-
-        //rb.angularVelocity = speed;
     }
 
     void CorrectPush()
@@ -674,25 +666,54 @@ public enum ObstacleSpace
     World,
     Local
 }
+public enum ObstacleValueType
+{
+    Set,
+    RandomBetween,
+}
 
 
 [Serializable]
 public class ObstacleMovementTarget
 {
+    [Header("General")]
+    public ObstacleValueType durationType;
     public float duration;
-    public Vector3 relativePosition;
+    public float _duration;
+
+    [Header("Position")]
+    public ObstacleValueType targetingTypePosition;
     public ObstacleMovementType relativePositionMovementType;
+    public Vector3 relativePosition;
+    public Vector3 _relativePosition;
     public float relativePositionMovementTypeStrength;
-    public Vector3 relativeRotation;
+
+    [Header("Rotation")]
+    public ObstacleValueType targetingTypeRotation;
     public ObstacleMovementType relativeRotationMovementType;
+    public Vector3 relativeRotation;
+    public Vector3 _relativeRotation;
     public float relativeRotationMovementTypeStrength;
-    public Vector3 relativeScale;
+
+    //[Header("Scale")]
+    [HideInInspector]
+    public ObstacleValueType targetingTypeScale;
+    [HideInInspector]
     public ObstacleMovementType relativeScaleMovementType;
+    [HideInInspector]
+    public Vector3 relativeScale;
+    [HideInInspector]
+    public Vector3 _relativeScale;
+    [HideInInspector]
     public float relativeScaleMovementTypeStrength;
 
+    [HideInInspector]
     public Vector3 startPosition;
+    [HideInInspector]
     public Vector3 startRotation;
+    [HideInInspector]
     public Vector3 startScale;
+    [HideInInspector]
     public float remainingDuration;
 }
 

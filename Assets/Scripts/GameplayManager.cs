@@ -224,7 +224,7 @@ public class GameplayManager : MonoBehaviour
             
             float percentageDistance = a / (a + b);
 
-            if (percentageDistance > 0.999 || percentageDistance.Equals(float.NaN)) break;
+            if (percentageDistance > 0.9999999 || percentageDistance.Equals(float.NaN)) break;
 
             cam.transform.position = startPosition + aimVector * percentageDistance;
 
