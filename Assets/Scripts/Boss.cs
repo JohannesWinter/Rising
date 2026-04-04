@@ -5,6 +5,7 @@ using UnityEngine;
 
 public class Boss : MonoBehaviour
 {
+    public BossPerformer performer;
     public GameObject bossObject;
     public Ability[] abilities;
     public float globalCooldownMultiplier = 1;
@@ -27,6 +28,7 @@ public class Boss : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        performer = gameObject.GetComponent<BossPerformer>();
         testAbility = -1;
         remainingDelay = delay;
         InitializeAbilities(abilities.Length);
@@ -144,7 +146,7 @@ public class Boss : MonoBehaviour
         {
             int tryCounter = 0;
             int positionCounter = 0;
-            while (tryCounter + positionCounter < abilities.Length)
+            while (tryCounter + positionCounter < priorityQueue.Count)
             {
                 LinkedListNode<Ability> toExecuteNode = GetLinkedListElement(priorityQueue.First, positionCounter);
                 Ability toExecute = toExecuteNode.Value;
@@ -161,7 +163,7 @@ public class Boss : MonoBehaviour
                     positionCounter++;
                     continue;
                 }
-                else if (AllowAbility(position, abilityDurations) == false)
+                else if (performer.AllowAbility(position, abilityDurations) == false)
                 {
                     if (toExecute.blockOnWait)
                         break;
@@ -293,49 +295,6 @@ public class Boss : MonoBehaviour
                 abilityCooldowns[i] = 0;
             }
         }
-    }
-
-    bool AllowAbility(int abilityPos, float[] durations)
-    {
-        switch (abilityPos)
-        {
-            case 0:
-                if (durations[1] > 0)
-                    return false;
-                break;
-            case 1:
-                if (durations[0] > 0)
-                    return false;
-                break;
-            case 2:
-                if (durations[3] > 0)
-                {
-                    float otherPercentageTimeLeftAfterOwnInitiationTime = (durations[3] - abilities[2].data[0].indicationTime / abilitySpeed) / (abilities[3].cooldown / abilitySpeed);
-                    if (otherPercentageTimeLeftAfterOwnInitiationTime > 0)
-                    {
-                        return false;
-                    }
-
-                }
-                break;
-            case 3:
-                if (durations[2] > 0)
-                {
-                    float otherPercentageTimeLeftAfterOwnInitiationTime = (durations[2] - abilities[3].data[0].indicationTime / abilitySpeed) / (abilities[2].cooldown / abilitySpeed);
-                    if (otherPercentageTimeLeftAfterOwnInitiationTime > 0)
-                    {
-                        return false;
-                    }
-                }
-                break;
-            case 4:
-                break;
-            case 5:
-                if (durations[0] > 0 || durations[1] > 0 || durations[2] > 0 || durations[3] > 0 || durations[4] > 0)
-                    return false;
-                break;
-        }
-        return true;
     }
     int AbilityArrayPos(Ability ability)
     {

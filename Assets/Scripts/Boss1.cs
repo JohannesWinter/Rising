@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Boss1 : MonoBehaviour
+public class Boss1 : MonoBehaviour, BossPerformer
 {
     public Boss boss;
     public int level;
@@ -60,11 +60,54 @@ public class Boss1 : MonoBehaviour
         }
     }
 
+    public bool AllowAbility(int abilityPos, float[] durations)
+    {
+        switch (abilityPos)
+        {
+            case 0:
+                if (durations[1] > 0)
+                    return false;
+                break;
+            case 1:
+                if (durations[0] > 0)
+                    return false;
+                break;
+            case 2:
+                if (durations[3] > 0)
+                {
+                    float otherPercentageTimeLeftAfterOwnInitiationTime = (durations[3] - boss.abilities[2].data[0].indicationTime / boss.abilitySpeed) / (boss.abilities[3].cooldown / boss.abilitySpeed);
+                    if (otherPercentageTimeLeftAfterOwnInitiationTime > 0)
+                    {
+                        return false;
+                    }
+
+                }
+                break;
+            case 3:
+                if (durations[2] > 0)
+                {
+                    float otherPercentageTimeLeftAfterOwnInitiationTime = (durations[2] - boss.abilities[3].data[0].indicationTime / boss.abilitySpeed) / (boss.abilities[2].cooldown / boss.abilitySpeed);
+                    if (otherPercentageTimeLeftAfterOwnInitiationTime > 0)
+                    {
+                        return false;
+                    }
+                }
+                break;
+            case 4:
+                break;
+            case 5:
+                if (durations[0] > 0 || durations[1] > 0 || durations[2] > 0 || durations[3] > 0 || durations[4] > 0)
+                    return false;
+                break;
+        }
+        return true;
+    }
+
 
     IEnumerator SetStage1()
     {
         boss.InitializeAbilities(4);
-        boss.cooldownSpeed = 0.5f;
+        boss.cooldownSpeed = 1f;
         boss.abilitySpeed = 1f;
         boss.globalCooldownMultiplier = 1f;
         boss.runAbilities = true;
@@ -82,7 +125,7 @@ public class Boss1 : MonoBehaviour
         boss.InitializeAbilities(5);
 
         boss.cooldownSpeed = 1f;
-        boss.abilitySpeed = 1f;
+        boss.abilitySpeed = 2f;
         boss.globalCooldownMultiplier = 1f;
         boss.runAbilities = true;
         boss.runCooldowns = true;
@@ -98,9 +141,9 @@ public class Boss1 : MonoBehaviour
         if (boss.runGeneral == false) yield break;
         boss.InitializeAbilities(6);
 
-        boss.cooldownSpeed = 3f;
-        boss.abilitySpeed = 2f;
-        boss.globalCooldownMultiplier = 0.5f;
+        boss.cooldownSpeed = 5f;
+        boss.abilitySpeed = 2.5f;
+        boss.globalCooldownMultiplier = 1/2.5f;
         boss.runAbilities = true;
         boss.runCooldowns = true;
         yield break;
@@ -111,4 +154,9 @@ public class Boss1 : MonoBehaviour
         boss.runCooldowns = false;
         yield break;
     }
+}
+
+public interface BossPerformer
+{
+    public bool AllowAbility(int abilityPos, float[] durations);
 }
