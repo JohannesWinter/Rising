@@ -41,6 +41,9 @@ public class GameplayManager : MonoBehaviour
         //currentLevel = 1;
         levelCancelButton.onClick.AddListener(Fail);
         levelStopMenu.SetActive(false);
+        Manager.m.worldBuilder.Reset();
+        Manager.m.playerCamera.transform.localPosition = new Vector3(0,0,-10);
+        Manager.m.playerController.playerObject.transform.localPosition = new Vector3(0,0, Manager.m.playerController.playerObject.transform.localPosition.z);
     }
 
     // Update is called once per frame
@@ -118,7 +121,7 @@ public class GameplayManager : MonoBehaviour
             currentHealth -= 1;
             if (currentHealth < 0)
             {
-                currentHealth = 3;
+                currentHealth = 9999;
                 currentLevel -= 1;
             }
         }
@@ -135,7 +138,7 @@ public class GameplayManager : MonoBehaviour
         currentState = GameState.Menu;
         Manager.m.playerCamera.transform.localPosition = new Vector3(0,0,-10);
         levelStopMenu.SetActive(false);
-        currentHealth = 3;
+        currentHealth = 9999;
         foreach (ObstacleTypedata obs in Manager.m.obstacleTypeDatasStopInMenu) obs.Stop();
     }
     void Stop()

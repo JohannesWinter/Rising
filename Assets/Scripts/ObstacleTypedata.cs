@@ -51,6 +51,7 @@ public class ObstacleTypedata : MonoBehaviour
 
     void Awake()
     {
+        if (collisionType == ObstacleCollisionType.Simple && agilityType == ObstacleAgilityType.Stuck) this.enabled = false;
         currentTarget = null;
         if (obstacleSpace == ObstacleSpace.World)
         {

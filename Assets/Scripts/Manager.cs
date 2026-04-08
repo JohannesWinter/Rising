@@ -15,6 +15,10 @@ public class Manager : MonoBehaviour
     public ObstacleTypedata[] obstacleTypeDatasResetOnLevelStart;
     public ObstacleTypedata[] obstacleTypeDatasStopInMenu;
 
+
+    public bool disableParticleSystems;
+
+
     private void Awake()
     {
         if (m == null)
@@ -45,6 +49,14 @@ public class Manager : MonoBehaviour
                 {
                     obstacleTypeDatasStopInMenu[count] = obstacleTypeDatas[i];
                     count++;
+                }
+            }
+            if (disableParticleSystems)
+            {
+                ParticleSystem[] allSystems = world.GetComponentsInChildren<ParticleSystem>();
+                for (int i = 0; i < allSystems.Length; i++)
+                {
+                    allSystems[i].gameObject.SetActive(false);
                 }
             }
         }
