@@ -236,37 +236,25 @@ public class Boss : MonoBehaviour
     {
 
         ad.obsSpace.transform.localPosition = startPosition;
-        
-        if (ad.indicator != null)
+        float indicationTime = ad.indicationTime / Mathf.Lerp(1, abilitySpeed, abilityDurationScaling);
+        if (ad.abilityIndicator != null)
         {
-            var emission = ad.indicator.emission;
-            emission.rateOverTime = new ParticleSystem.MinMaxCurve(ad.indicationEmission);
+            ad.abilityIndicator.ExecuteIndication(indicationTime);
         }
         float timer = 0;
-        while (timer < (ad.indicationTime / Mathf.Lerp(1, abilitySpeed, abilityDurationScaling)))
+        while (timer < indicationTime)
         {
             timer += Time.deltaTime;
             yield return new WaitForEndOfFrame();
             if (inFight == false && test == false)
             {
-                if (ad.indicator != null)
-                {
-                    var emission = ad.indicator.emission;
-                    emission.rateOverTime = new ParticleSystem.MinMaxCurve(0);
-                }
                 yield break;
             }
         }
         if (ad.obs.GetComponent<Renderer>()) ad.obs.GetComponent<Renderer>().enabled = true;
         if (ad.obs.GetComponent<Collider2D>()) ad.obs.GetComponent<Collider2D>().enabled = true;
-        if (ad.indicator != null)
-        {
-            var emission = ad.indicator.emission;
-            emission.rateOverTime = new ParticleSystem.MinMaxCurve(0);
-        }
 
         ad.obs.triggerd = true;
-        
     }
 
     void UpdateAbilityTimer()
@@ -364,6 +352,8 @@ public class AbilityData
     public ParticleSystem indicator;
     public float indicationEmission;
     public float indicationTime;
+
+    public AbilityIndicator abilityIndicator;
 }
 [System.Serializable]
 public class Ability
