@@ -392,6 +392,7 @@ public class ObstacleTypedata : MonoBehaviour
             rb.velocity = Vector3.zero;
             return;
         }
+        Physics.SyncTransforms();
         if (obstacleSpace == ObstacleSpace.World)
         {
             rb.MovePosition(aimPosition);

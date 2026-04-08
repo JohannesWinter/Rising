@@ -12,8 +12,6 @@ public class PlayerController : MonoBehaviour
     public float minSideGap;
     public float minTopGap;
     public float minBotGap;
-    public float maxSpeed;
-    public float approachSpeed;
     Transform playerTransform;
     Resolution res;
     float viewsizeX;
@@ -101,12 +99,8 @@ public class PlayerController : MonoBehaviour
         if (Manager.m.gameplayManager.currentState != GameState.Stopped && Manager.m.gameplayManager.currentState != GameState.Resetting && stunTimer <= 0)
         {
             Vector3 adjustedTargetPos = targetPos + Manager.m.playerCamera.transform.localPosition;
-            Vector3 targetVelocity = (adjustedTargetPos - playerTransform.localPosition) * approachSpeed;
+            Vector3 targetVelocity = (adjustedTargetPos - playerTransform.localPosition) / Time.fixedDeltaTime;
 
-            if (targetVelocity.magnitude > maxSpeed)
-            {
-                targetVelocity = targetVelocity.normalized * maxSpeed;
-            }
             rb.velocity = targetVelocity + Vector3.up * currentGeneralSpeed;
             rb.velocity += currentAirPush;
         }

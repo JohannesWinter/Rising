@@ -73,10 +73,6 @@ public class Boss : MonoBehaviour
                     OnFightStart();
                 }
                 inFight = true;
-                if (Manager.m.gameplayManager.currentState != GameState.Resetting)
-                {
-                    UpdateBossPosition();
-                }
                 if (runAbilities)
                 {
                     UpdateAbilityUsage();
@@ -97,6 +93,13 @@ public class Boss : MonoBehaviour
             remainingDelay = delay;
             inFight = false;
             
+        }
+    }
+    void FixedUpdate()
+    {
+        if (runGeneral && Manager.m.gameplayManager.currentState != GameState.Resetting)
+        {
+            UpdateBossPosition();
         }
     }
     void OnFightStart()
@@ -125,7 +128,7 @@ public class Boss : MonoBehaviour
 
     void UpdateBossPosition()
     {
-        bossObject.transform.position = new Vector3(0, Manager.m.playerCamera.transform.position.y, 0);
+        bossObject.GetComponent<Rigidbody2D>().MovePosition(new Vector3(0, Manager.m.playerCamera.transform.position.y, 0));
     }
     void UpdateAbilitySpeed()
     {

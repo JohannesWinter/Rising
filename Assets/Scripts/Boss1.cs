@@ -41,7 +41,6 @@ public class Boss1 : MonoBehaviour, BossPerformer
             if (cam.localPosition.y > section3Start && startedSection3 == false)
             {
                 startedSection3 = true;
-                print("section3!!!");
                 StartCoroutine(SetStage3());
             }
             if (cam.localPosition.y > end && ended == false)
