@@ -349,8 +349,6 @@ public class AbilityData
     [Header("Selectable")]
     public Transform obsSpace;
     public ObstacleTypedata obs;
-    public ParticleSystem indicator;
-    public float indicationEmission;
     public float indicationTime;
 
     public AbilityIndicator abilityIndicator;

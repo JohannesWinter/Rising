@@ -6,7 +6,7 @@ using UnityEngine.EventSystems;
 public class AbilityIndicator : MonoBehaviour
 {
     [Header("General")]
-    public AbilityIndicatorType type;
+    public AbilityIndicationType type;
 
     [Header("PaticleSystem")]
     public ParticleSystem particle_particleSystem;
@@ -16,9 +16,9 @@ public class AbilityIndicator : MonoBehaviour
     {
         switch (type)
         {
-            case AbilityIndicatorType.None:
+            case AbilityIndicationType.None:
                 break;
-            case AbilityIndicatorType.ParticleSystem:
+            case AbilityIndicationType.ParticleSystem:
                 StartCoroutine(ExecuteIndicationParticleSystem(duration));
                 break;
         }
@@ -40,7 +40,7 @@ public class AbilityIndicator : MonoBehaviour
     } 
 }
 
-public enum AbilityIndicatorType
+public enum AbilityIndicationType
 {
     None,
     ParticleSystem,
