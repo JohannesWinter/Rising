@@ -61,8 +61,10 @@ public class CrushDetector : MonoBehaviour
     private void OnCrushed(float depth, int colliders)
     {
         //Debug.Log($"CRUSHED! Depth: {depth}, Colliders: {colliders}");
-        Manager.m.playerController.dead = true;
-
+        if (Manager.m.gameplayManager.currentState == GameState.Running)
+        {
+            Manager.m.playerController.dead = true;   
+        }
     }
 
     void OnDrawGizmosSelected()
