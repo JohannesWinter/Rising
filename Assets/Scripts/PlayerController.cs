@@ -16,6 +16,7 @@ public class PlayerController : MonoBehaviour
     Resolution res;
     float viewsizeX;
     float viewsizeY;
+    public float maxForceDistance;
     Vector2 mousePos = Vector2.zero;
     Vector2 currentAirPush;
 
@@ -99,9 +100,15 @@ public class PlayerController : MonoBehaviour
         if (Manager.m.gameplayManager.currentState != GameState.Stopped && Manager.m.gameplayManager.currentState != GameState.Resetting && stunTimer <= 0)
         {
             Vector3 adjustedTargetPos = targetPos + Manager.m.playerCamera.transform.localPosition;
-            Vector3 targetVelocity = (adjustedTargetPos - playerTransform.localPosition) / Time.fixedDeltaTime;
+            Vector3 adjustedRelativeTargetPos = adjustedTargetPos - playerTransform.localPosition;
+            adjustedRelativeTargetPos.z = 0;
+            if (adjustedRelativeTargetPos.magnitude > maxForceDistance)
+            {
+                adjustedRelativeTargetPos = adjustedRelativeTargetPos.normalized * maxForceDistance;
+            }
+            Vector3 targetVelocity = adjustedRelativeTargetPos / Time.fixedDeltaTime;
 
-            rb.velocity = targetVelocity + Vector3.up * currentGeneralSpeed;
+            rb.velocity = targetVelocity; // + Vector3.up * currentGeneralSpeed
             rb.velocity += currentAirPush;
         }
         else
@@ -154,6 +161,42 @@ public class PlayerController : MonoBehaviour
     }
 
     void HandleObstacleCollision(ObstacleTypedata obs)
+    {
+        if (Manager.m.gameplayManager.currentState == GameState.Running)
+        {
+            switch (obs.collisionType)
+            {
+                case ObstacleCollisionType.Simple:
+                    break;
+                case ObstacleCollisionType.Sharp:
+                    dead = true;
+                    break;
+                case ObstacleCollisionType.Air:
+                    currentAirPush += obs.AIR_airFlow.AIR_force * obs.AIR_airFlow.AIR_currentPercentageAirStrength + obs.AIR_airFlow.AIR_force * RandomOf(new float[] { -1, 1 }) * Random.Range(0, obs.AIR_airFlow.AIR_variety) * obs.AIR_airFlow.AIR_currentPercentageAirStrength;
+                    if (obs.AIR_airFlow.AIR_fullStrengthTime > 0) obs.AIR_airFlow.AIR_currentPercentageAirStrength += Time.fixedDeltaTime / obs.AIR_airFlow.AIR_fullStrengthTime;
+                    else obs.AIR_airFlow.AIR_currentPercentageAirStrength = 1;
+                    break;
+                case ObstacleCollisionType.Portal:
+                    if (obs.PORTAL_portalData.relativity == Relativity.Relative)
+                        playerObject.transform.position = obs.gameObject.transform.position + new Vector3(obs.PORTAL_portalData.position.x, obs.PORTAL_portalData.position.y, 0);
+                    else if (obs.PORTAL_portalData.relativity == Relativity.Absolute)
+                        playerObject.transform.position = obs.PORTAL_portalData.position;
+
+                    if (obs.PORTAL_portalData.stunTimer > stunTimer)
+                        stunTimer = obs.PORTAL_portalData.stunTimer;
+
+                    break;
+            }
+        }
+    }
+    private void OnTriggerEnter2D(Collider2D collision)
+    {
+        if (collision.gameObject.GetComponent<ObstacleTypedata>())
+        {
+            HandleObstacleTrigger(collision.gameObject.GetComponent<ObstacleTypedata>());
+        }
+    }
+    void HandleObstacleTrigger(ObstacleTypedata obs)
     {
         if (Manager.m.gameplayManager.currentState == GameState.Running)
         {

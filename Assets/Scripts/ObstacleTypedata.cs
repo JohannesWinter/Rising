@@ -474,7 +474,8 @@ public class ObstacleTypedata : MonoBehaviour
                 closestLine = PUSH_pushableLines[i];
             }
         }
-        gameObject.transform.position = closestLinePoint;
+        rb.position = (closestLinePoint);
+        //gameObject.transform.position = closestLinePoint;
 
         Vector3 forcePoint = closestLinePoint + new Vector3(rb.velocity.x, rb.velocity.y, 0);
 
@@ -502,7 +503,7 @@ public class ObstacleTypedata : MonoBehaviour
         else
         {
             Vector3 linearAdjustedForceRelative = linearAdjustedForcePoint - transform.position;
-            rb.velocity = linearAdjustedForceRelative;
+            rb.velocity = linearAdjustedForceRelative * (1 / Mathf.Pow(2,closestLine.drag)); // drag = 0 -> 1, 1 -> 1/2, 2 -> 1/4, 3 -> 1/8, ...
         }
     }
 
@@ -724,6 +725,7 @@ public class PushableLine
 {
     public Vector3 start;
     public Vector3 end;
+    public float drag = 0.1f;
 }
 
 [Serializable]

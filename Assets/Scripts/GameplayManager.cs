@@ -22,6 +22,7 @@ public class GameplayManager : MonoBehaviour
     public Button levelCancelButton;
     public int currentTimeScale;
     public int currentLevel;
+    public int maxHealth;
     public int currentHealth;
     public float cameraResetSpeed;
     public float maxCameraResetTime;
@@ -121,7 +122,7 @@ public class GameplayManager : MonoBehaviour
             currentHealth -= 1;
             if (currentHealth < 0)
             {
-                currentHealth = 9999;
+                currentHealth = maxHealth;
                 currentLevel -= 1;
             }
         }
@@ -138,7 +139,7 @@ public class GameplayManager : MonoBehaviour
         currentState = GameState.Menu;
         Manager.m.playerCamera.transform.localPosition = new Vector3(0,0,-10);
         levelStopMenu.SetActive(false);
-        currentHealth = 9999;
+        currentHealth = maxHealth;
         foreach (ObstacleTypedata obs in Manager.m.obstacleTypeDatasStopInMenu) obs.Stop();
     }
     void Stop()
@@ -188,7 +189,7 @@ public class GameplayManager : MonoBehaviour
         {
             healthDisplay.publicHealth = currentHealth;
         }
-        healthDisplay.publicMaxHealth = 3;
+        healthDisplay.publicMaxHealth = maxHealth;
         if (healthDisplay.publicAlpha < 1 && showText == true)
         {
             if (headlineReappearSpeed == 0) healthDisplay.publicAlpha = 1;

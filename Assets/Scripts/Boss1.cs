@@ -142,7 +142,7 @@ public class Boss1 : MonoBehaviour, BossPerformer
         boss.InitializeAbilities(6);
 
         boss.cooldownSpeed = 5f;
-        boss.abilitySpeed = 2.5f;
+        boss.abilitySpeed = 2f;
         boss.globalCooldownMultiplier = 1/2.5f;
         boss.runAbilities = true;
         boss.runCooldowns = true;
