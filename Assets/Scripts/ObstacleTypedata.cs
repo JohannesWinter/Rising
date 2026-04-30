@@ -64,6 +64,15 @@ public class ObstacleTypedata : MonoBehaviour
             startPosition = transform.localPosition;
             startScale = transform.localScale;
             startRotation = transform.localRotation.eulerAngles;
+
+            foreach (PushableLine p in PUSH_pushableLines)
+            {
+                Vector3 startWorldPos = transform.parent.TransformPoint(p.start + transform.localPosition);
+                Vector3 endWorldPos = transform.parent.TransformPoint(p.end + transform.localPosition);
+
+                p.start = startWorldPos - transform.position;
+                p.end = endWorldPos - transform.position;
+            }
         }
         currentDelay = startDelay;
         if (agilityType == ObstacleAgilityType.Moving)

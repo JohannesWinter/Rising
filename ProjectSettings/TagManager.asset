@@ -15,8 +15,8 @@ TagManager:
   - Obstacle
   - ColPlayer
   - Camera
-  - 
-  - 
+  - ObstacleNoCol
+  - ObstacleOtherCol
   - 
   - 
   - 
