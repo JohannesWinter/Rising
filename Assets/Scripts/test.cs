@@ -1,19 +1,21 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class test : MonoBehaviour
 {
-    Vector3 localPos;
-    // Start is called before the first frame update
-    void Start()
-    {
-        localPos = this.gameObject.transform.localPosition;
-    }
+    public List<HurensohnLine> linessss;
+}
 
-    // Update is called once per frame
-    void FixedUpdate()
+[Serializable]
+public class HurensohnLine
+{
+    private float x = 10;
+    public AnimationCurve ll = new AnimationCurve(new Keyframe(0, 0), new Keyframe(1, 0));
+
+    public HurensohnLine()
     {
-        this.gameObject.transform.localPosition = localPos;
+        Debug.Log(x);
     }
 }

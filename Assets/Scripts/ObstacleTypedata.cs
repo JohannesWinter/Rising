@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Net;
+using System.Security.Cryptography;
 using Unity.VisualScripting;
 using UnityEditor.Rendering;
 using UnityEngine;
@@ -34,6 +35,7 @@ public class ObstacleTypedata : MonoBehaviour
 
     [Header("PUSHABLE")]
     public List<PushableLine> PUSH_pushableLines;
+    public List<CurvedPushableLine> PUSH_curvedPushableLines;
     float MinLineConnectDistance = 0.1f;
 
     [Header("AIR")]
@@ -53,6 +55,11 @@ public class ObstacleTypedata : MonoBehaviour
     {
         if (collisionType == ObstacleCollisionType.Simple && agilityType == ObstacleAgilityType.Stuck) this.enabled = false;
         currentTarget = null;
+        foreach (CurvedPushableLine c in PUSH_curvedPushableLines)
+        {
+            var lines = ConvertToPushableLines(c);
+            PUSH_pushableLines.AddRange(lines);
+        }
         if (obstacleSpace == ObstacleSpace.World)
         {
             startPosition = transform.position;
@@ -634,6 +641,46 @@ public class ObstacleTypedata : MonoBehaviour
                 return t;
         }
     }
+
+    public List<PushableLine> ConvertToPushableLines(CurvedPushableLine curvedLine)
+    {
+        List<PushableLine> segments = new List<PushableLine>();
+
+        int segmentCount = Mathf.Max(1, Mathf.RoundToInt(curvedLine.tiling) + 1);
+
+        Vector3 fullDirection = curvedLine.end - curvedLine.start;
+        float totalDistance = fullDirection.magnitude;
+
+        Vector3 dir = fullDirection.normalized;
+
+        Vector3 sideDirection = new Vector3(-dir.y, dir.x, 0f);
+        // ---------------------------------------
+
+        Vector3 lastPoint = curvedLine.start;
+
+        for (int i = 1; i <= segmentCount; i++)
+        {
+            float t = (float)i / segmentCount;
+
+            Vector3 linearPoint = Vector3.Lerp(curvedLine.start, curvedLine.end, t);
+
+            float curveOffset = curvedLine.curve.Evaluate(t) * totalDistance;
+            Vector3 finalPoint = linearPoint + (sideDirection * curveOffset);
+
+            float currentDrag = curvedLine.drag.Evaluate(t);
+
+            segments.Add(new PushableLine
+            {
+                start = lastPoint,
+                end = finalPoint,
+                drag = currentDrag
+            });
+
+            lastPoint = finalPoint;
+        }
+
+        return segments;
+    }
 }
 
 public enum ObstacleCollisionType
@@ -751,4 +798,17 @@ public class PortalData
     public Vector2 position;
     public Relativity relativity;
     public float stunTimer;
+}
+[Serializable]
+public class CurvedPushableLine
+{
+    public Vector3 start;
+    public Vector3 end;
+    public float tiling;
+    [SerializeField]
+    private AnimationCurve _curve = new AnimationCurve(new Keyframe(0, 0), new Keyframe(1, 0));
+    [SerializeField]
+    private AnimationCurve _drag = new AnimationCurve(new Keyframe(0, 0), new Keyframe(1, 0));
+    public AnimationCurve curve => _curve;
+    public AnimationCurve drag => _drag;
 }
