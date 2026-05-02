@@ -36,6 +36,9 @@ public class ObstacleTypedata : MonoBehaviour
     [Header("PUSHABLE")]
     public List<PushableLine> PUSH_pushableLines;
     public List<CurvedPushableLine> PUSH_curvedPushableLines;
+    public bool followDirection;
+    float relativeRotation;
+    bool setRelativeRotation = false;
     float MinLineConnectDistance = 0.1f;
 
     [Header("AIR")]
@@ -490,6 +493,26 @@ public class ObstacleTypedata : MonoBehaviour
                 closestLine = PUSH_pushableLines[i];
             }
         }
+        if (followDirection)
+        {
+            if (setRelativeRotation == false)
+            {
+                var startPoint = closestLine.start;
+                var direction = closestLine.end - startPoint;
+
+                var angle = Mathf.Atan2(direction.y, direction.x) * 180 / Mathf.PI;
+                relativeRotation = gameObject.transform.rotation.eulerAngles.z - angle;
+                setRelativeRotation = true;
+            }
+            else
+            {
+                var startPoint = closestLine.start;
+                var direction = closestLine.end - startPoint;
+
+                var angle = Mathf.Atan2(direction.y, direction.x) * 180 / Mathf.PI;
+                gameObject.transform.rotation = Quaternion.Euler(gameObject.transform.eulerAngles.x, gameObject.transform.eulerAngles.y, relativeRotation + angle);
+            }
+        }
         rb.position = (closestLinePoint);
         //gameObject.transform.position = closestLinePoint;
 
@@ -654,7 +677,6 @@ public class ObstacleTypedata : MonoBehaviour
         Vector3 dir = fullDirection.normalized;
 
         Vector3 sideDirection = new Vector3(-dir.y, dir.x, 0f);
-        // ---------------------------------------
 
         Vector3 lastPoint = curvedLine.start;
 

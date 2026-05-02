@@ -77,6 +77,32 @@ public class Worldbuilder : MonoBehaviour
     {
         return currentMaxHeight;
     }
+    public float GetLevelMinHeight(int level)
+    {
+        if (level <= 1) return 0;
+        else
+        {
+            float currentHeight = 0;
+            for (int i = 0; i < level - 1; i++)
+            {
+                currentHeight += levelList[i].height;
+            }
+            return currentHeight;
+        }
+    }
+    public float GetLevelMaxHeight(int level)
+    {
+        if (level <= 0) return 0;
+        else
+        {
+            float currentHeight = 0;
+            for (int i = 0; i < level; i++)
+            {
+                currentHeight += levelList[i].height;
+            }
+            return currentHeight;
+        }
+    }
 }
 
 [Serializable]

@@ -102,10 +102,23 @@ public class PlayerController : MonoBehaviour
             Vector3 adjustedTargetPos = targetPos + Manager.m.playerCamera.transform.localPosition;
             Vector3 adjustedRelativeTargetPos = adjustedTargetPos - playerTransform.localPosition;
             adjustedRelativeTargetPos.z = 0;
-            if (adjustedRelativeTargetPos.magnitude > maxForceDistance)
+
+            RaycastHit2D playerToCursor = Physics2D.Raycast(playerObject.transform.position, adjustedRelativeTargetPos, adjustedRelativeTargetPos.magnitude, Physics2D.GetLayerCollisionMask(3)); // 3 == playerlayer
+            if (playerToCursor.collider != null)
             {
-                adjustedRelativeTargetPos = adjustedRelativeTargetPos.normalized * maxForceDistance;
+                float hitDistance = playerToCursor.distance;
+                float currentMaxForceDistance = hitDistance + maxForceDistance;
+                if (currentMaxForceDistance < adjustedRelativeTargetPos.magnitude)
+                {
+                    adjustedRelativeTargetPos = adjustedRelativeTargetPos.normalized * currentMaxForceDistance;
+                }
             }
+
+
+            //if (adjustedRelativeTargetPos.magnitude > maxForceDistance)
+            //{
+            //    adjustedRelativeTargetPos = adjustedRelativeTargetPos.normalized * maxForceDistance;
+            //}
             Vector3 targetVelocity = adjustedRelativeTargetPos / Time.fixedDeltaTime;
 
             rb.velocity = targetVelocity; // + Vector3.up * currentGeneralSpeed
