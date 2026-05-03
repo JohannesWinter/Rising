@@ -85,7 +85,7 @@ public class Worldbuilder : MonoBehaviour
             float currentHeight = 0;
             for (int i = 0; i < level - 1; i++)
             {
-                currentHeight += levelList[i].height;
+                if (i < levelList.Count) currentHeight += levelList[i].height;
             }
             return currentHeight;
         }
@@ -98,7 +98,7 @@ public class Worldbuilder : MonoBehaviour
             float currentHeight = 0;
             for (int i = 0; i < level; i++)
             {
-                currentHeight += levelList[i].height;
+                if (i < levelList.Count) currentHeight += levelList[i].height;
             }
             return currentHeight;
         }

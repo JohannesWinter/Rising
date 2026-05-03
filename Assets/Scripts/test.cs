@@ -2,20 +2,34 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+[ExecuteInEditMode]
 
-public class test : MonoBehaviour
+public class ParticleTriggerAccess : MonoBehaviour
 {
-    public List<HurensohnLine> linessss;
-}
+    public ParticleSystem ps;
 
-[Serializable]
-public class HurensohnLine
-{
-    private float x = 10;
-    public AnimationCurve ll = new AnimationCurve(new Keyframe(0, 0), new Keyframe(1, 0));
+    List<ParticleSystem.Particle> enter = new List<ParticleSystem.Particle>();
 
-    public HurensohnLine()
+    void OnParticleTrigger()
     {
-        Debug.Log(x);
+        if (ps == null) ps = gameObject.GetComponent<ParticleSystem>();
+        int count = ps.GetTriggerParticles(
+            ParticleSystemTriggerEventType.Enter,
+            enter
+        );
+
+        for (int i = 0; i < count; i++)
+        {
+            ParticleSystem.Particle p = enter[i];
+
+            p.remainingLifetime = 0.5f;
+
+            enter[i] = p;
+        }
+
+        ps.SetTriggerParticles(
+            ParticleSystemTriggerEventType.Enter,
+            enter
+        );
     }
 }
