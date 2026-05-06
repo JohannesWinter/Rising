@@ -23,6 +23,9 @@ public class ObstacleTypedata : MonoBehaviour
     Vector3 startScale;
     Vector3 startRotation;
 
+    Vector3 startAbsPosition;
+    Vector3 startAbsPartentAbbrevation;
+
     [Header("MOVING")]
     public List<ObstacleMovementTarget> MOVING_movementTargets;
     public ObstacleTriggerType triggerType;
@@ -36,10 +39,26 @@ public class ObstacleTypedata : MonoBehaviour
     [Header("PUSHABLE")]
     public List<PushableLine> PUSH_pushableLines;
     public List<CurvedPushableLine> PUSH_curvedPushableLines;
+
+    public Vector2 randomizedVelocityAddMin;
+    public Vector2 randomizedVelocityAddMax;
+    public float randomizedVelocityCooldownMin;
+    public float randomizedVelocityCooldownMax;
+    public float randomizedTorqueAddMin;
+    public float randomizedTorqueAddMax;
+    public float randomizedTorqueCooldownMin;
+    public float randomizedTorqueCooldownMax;
+    public float minAngularSpeed;
+    public bool reverseTorqueOnSlowdown;
+    public float reverseTorqueStart;
+    public float reverseTorqueStrength;
     public bool followDirection;
+    float angularSpeedLastFrame;
     float relativeRotation;
     bool setRelativeRotation = false;
     float MinLineConnectDistance = 0.1f;
+    float randomizedVelocityCooldown;
+    float randomizedTorqueCooldown;
 
     [Header("AIR")]
     public AirFlow AIR_airFlow;
@@ -58,6 +77,9 @@ public class ObstacleTypedata : MonoBehaviour
     {
         if (collisionType == ObstacleCollisionType.Simple && agilityType == ObstacleAgilityType.Stuck) this.enabled = false;
         currentTarget = null;
+        startAbsPosition = gameObject.transform.position;
+        startAbsPartentAbbrevation = startAbsPosition - transform.parent.position;
+
         foreach (CurvedPushableLine c in PUSH_curvedPushableLines)
         {
             var lines = ConvertToPushableLines(c);
@@ -75,24 +97,24 @@ public class ObstacleTypedata : MonoBehaviour
             startScale = transform.localScale;
             startRotation = transform.localRotation.eulerAngles;
 
-            foreach (PushableLine p in PUSH_pushableLines)
-            {
-                Vector3 startWorldPos = transform.parent.TransformPoint(p.start + transform.localPosition);
-                Vector3 endWorldPos = transform.parent.TransformPoint(p.end + transform.localPosition);
+            //foreach (PushableLine p in PUSH_pushableLines)
+            //{
+            //    Vector3 startWorldPos = transform.parent.TransformPoint(p.start + transform.localPosition);
+            //    Vector3 endWorldPos = transform.parent.TransformPoint(p.end + transform.localPosition);
 
-                p.start = startWorldPos - transform.position;
-                p.end = endWorldPos - transform.position;
-            }
+            //    p.start = startWorldPos - transform.position;
+            //    p.end = endWorldPos - transform.position;
+            //}
         }
         currentDelay = startDelay;
+        for (int i = 0; i < PUSH_pushableLines.Count; i++)
+        {
+            //PUSH_pushableLines[i].start += gameObject.transform.position;
+            //PUSH_pushableLines[i].end += gameObject.transform.position;
+        }
         if (agilityType == ObstacleAgilityType.Moving)
         {
             nextTargetEntry = 0;
-        }
-        for (int i = 0; i < PUSH_pushableLines.Count; i++)
-        {
-            PUSH_pushableLines[i].start += gameObject.transform.position;
-            PUSH_pushableLines[i].end += gameObject.transform.position;
         }
         if (this.gameObject.GetComponent<Collider2D>() == null)
         {
@@ -455,6 +477,10 @@ public class ObstacleTypedata : MonoBehaviour
         {
             return;
         }
+        if (obstacleSpace == ObstacleSpace.Local)
+        {
+            startAbsPosition = transform.parent.transform.position + startAbsPartentAbbrevation;
+        }
 
         List<PushableLine> connected = new List<PushableLine>();
         PushableLine closestLine = null;
@@ -462,24 +488,27 @@ public class ObstacleTypedata : MonoBehaviour
         float closestDistance = float.MaxValue;
         for (int i = 0; i < PUSH_pushableLines.Count; i++)
         {
-            var distance = GetDistanceFromLine(transform.position, PUSH_pushableLines[i].start, PUSH_pushableLines[i].end);
-            var currentClosestPoint = GetClosestPointOnLine(transform.position, PUSH_pushableLines[i].start, PUSH_pushableLines[i].end);
+            Vector3 currentStart = PUSH_pushableLines[i].start + startAbsPosition;
+            Vector3 currentEnd = PUSH_pushableLines[i].end + startAbsPosition;
 
-            var startEndRelativeVec = PUSH_pushableLines[i].end - PUSH_pushableLines[i].start;
-            var startCurrentRelativeVec = currentClosestPoint - PUSH_pushableLines[i].start;
+            var distance = GetDistanceFromLine(transform.position, currentStart, currentEnd);
+            var currentClosestPoint = GetClosestPointOnLine(transform.position, currentStart, currentEnd);
 
-            var endStartRelativeVec = PUSH_pushableLines[i].start - PUSH_pushableLines[i].end;
-            var endCurrentRelativeVec = currentClosestPoint - PUSH_pushableLines[i].end;
+            var startEndRelativeVec = currentEnd - currentStart;
+            var startCurrentRelativeVec = currentClosestPoint - currentStart;
+
+            var endStartRelativeVec = currentStart - currentEnd;
+            var endCurrentRelativeVec = currentClosestPoint - currentEnd;
 
             if (Vector3.Dot(startEndRelativeVec, startCurrentRelativeVec) < 0)
             {
-                distance = Vector3.Distance(PUSH_pushableLines[i].start, transform.position);
-                currentClosestPoint = PUSH_pushableLines[i].start;
+                distance = Vector3.Distance(currentStart, transform.position);
+                currentClosestPoint = currentStart;
             }
             else if (Vector3.Dot(endStartRelativeVec, endCurrentRelativeVec) < 0)
             {
-                distance = Vector3.Distance(PUSH_pushableLines[i].end, transform.position);
-                currentClosestPoint = PUSH_pushableLines[i].end;
+                distance = Vector3.Distance(currentEnd, transform.position);
+                currentClosestPoint = currentEnd;
             }
 
             if (distance <= MinLineConnectDistance)
@@ -497,8 +526,8 @@ public class ObstacleTypedata : MonoBehaviour
         {
             if (setRelativeRotation == false)
             {
-                var startPoint = closestLine.start;
-                var direction = closestLine.end - startPoint;
+                var startPoint = closestLine.start + startAbsPosition;
+                var direction = closestLine.end + startAbsPosition - startPoint;
 
                 var angle = Mathf.Atan2(direction.y, direction.x) * 180 / Mathf.PI;
                 relativeRotation = gameObject.transform.rotation.eulerAngles.z - angle;
@@ -506,8 +535,8 @@ public class ObstacleTypedata : MonoBehaviour
             }
             else
             {
-                var startPoint = closestLine.start;
-                var direction = closestLine.end - startPoint;
+                var startPoint = closestLine.start + startAbsPosition;
+                var direction = closestLine.end + startAbsPosition - startPoint;
 
                 var angle = Mathf.Atan2(direction.y, direction.x) * 180 / Mathf.PI;
                 gameObject.transform.rotation = Quaternion.Euler(gameObject.transform.eulerAngles.x, gameObject.transform.eulerAngles.y, relativeRotation + angle);
@@ -518,16 +547,19 @@ public class ObstacleTypedata : MonoBehaviour
 
         Vector3 forcePoint = closestLinePoint + new Vector3(rb.velocity.x, rb.velocity.y, 0);
 
-        Vector3 linearAdjustedForcePoint = GetClosestPointOnLine(forcePoint, closestLine.start, closestLine.end);
+        Vector3 closestStart = closestLine.start + startAbsPosition;
+        Vector3 closestEnd = closestLine.end + startAbsPosition;
 
-        var startEndRelativeVecAbs = closestLine.end - closestLine.start;
-        var endStartRelativeVecAbs = closestLine.start - closestLine.end;
+        Vector3 linearAdjustedForcePoint = GetClosestPointOnLine(forcePoint, closestStart, closestEnd);
 
-        var startCurrentRelativeVecPoint = transform.position - closestLine.start;
-        var endCurrentRelativeVecPoint = transform.position - closestLine.end;
+        var startEndRelativeVecAbs = closestEnd - closestStart;
+        var endStartRelativeVecAbs = closestStart - closestEnd;
 
-        var startCurrentRelativeVecForce = forcePoint - closestLine.start;
-        var endCurrentRelativeVecForce = forcePoint - closestLine.end;
+        var startCurrentRelativeVecPoint = transform.position - closestStart;
+        var endCurrentRelativeVecPoint = transform.position - closestEnd;
+
+        var startCurrentRelativeVecForce = forcePoint - closestStart;
+        var endCurrentRelativeVecForce = forcePoint - closestEnd;
 
         bool pastStart = Vector3.Dot(startEndRelativeVecAbs, startCurrentRelativeVecPoint) < 0;
         bool movingPastStart = Vector3.Dot(startEndRelativeVecAbs, startCurrentRelativeVecForce) < 0;
@@ -544,6 +576,41 @@ public class ObstacleTypedata : MonoBehaviour
             Vector3 linearAdjustedForceRelative = linearAdjustedForcePoint - transform.position;
             rb.velocity = linearAdjustedForceRelative * (1 / Mathf.Pow(2,closestLine.drag)); // drag = 0 -> 1, 1 -> 1/2, 2 -> 1/4, 3 -> 1/8, ...
         }
+        if (randomizedVelocityAddMax.magnitude != 0)
+        {
+            if (randomizedVelocityCooldown <= 0)
+            {
+                randomizedVelocityCooldown = UnityEngine.Random.Range(randomizedVelocityCooldownMin, randomizedVelocityCooldownMax);
+                rb.velocity += new Vector2(UnityEngine.Random.Range(randomizedVelocityAddMin.x, randomizedVelocityAddMax.x),
+                    UnityEngine.Random.Range(randomizedVelocityAddMin.y, randomizedVelocityAddMax.y) );
+            }
+            randomizedVelocityCooldown -= Time.deltaTime;
+        }
+        if (randomizedTorqueAddMax != 0)
+        {
+            if (randomizedTorqueCooldown <= 0)
+            {
+                randomizedTorqueCooldown = UnityEngine.Random.Range(randomizedTorqueCooldownMin, randomizedTorqueCooldownMax);
+                rb.angularVelocity += UnityEngine.Random.Range(randomizedTorqueAddMin, randomizedTorqueAddMax);
+            }
+            randomizedTorqueCooldown -= Time.deltaTime;
+        }
+
+        //angular velocity
+        if (reverseTorqueOnSlowdown)
+        {
+            if (Mathf.Abs(angularSpeedLastFrame) > reverseTorqueStart && Mathf.Abs(rb.angularVelocity) < reverseTorqueStart)
+            {
+                rb.angularVelocity = reverseTorqueStrength * Mathf.Sign(angularSpeedLastFrame) * -1;
+            }
+        }
+
+
+        if (Mathf.Abs(rb.angularVelocity) < minAngularSpeed && Mathf.Abs(angularSpeedLastFrame) > Mathf.Abs(rb.angularVelocity))
+        {
+            rb.angularVelocity = 0;
+        }
+        angularSpeedLastFrame = rb.angularVelocity;
     }
 
     void UpdateAirPush()

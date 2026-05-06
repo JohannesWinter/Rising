@@ -12,12 +12,12 @@ TagManager:
   - Player
   - Water
   - UI
-  - Obstacle
+  - ObstacleA_PACD
   - ColPlayer
   - Camera
-  - ObstacleNoCol
-  - ObstacleOtherCol
-  - 
+  - ObstacleB_PBCD
+  - ObstacleC_PAD
+  - ObstacleD_ABCD
   - 
   - 
   - 
