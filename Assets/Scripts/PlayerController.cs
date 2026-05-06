@@ -17,6 +17,7 @@ public class PlayerController : MonoBehaviour
     float viewsizeX;
     float viewsizeY;
     public float maxForceDistance;
+    public float maxSpeedDistance;
     Vector2 mousePos = Vector2.zero;
     Vector2 currentAirPush;
 
@@ -112,6 +113,10 @@ public class PlayerController : MonoBehaviour
                 {
                     adjustedRelativeTargetPos = adjustedRelativeTargetPos.normalized * currentMaxForceDistance;
                 }
+            }
+            if (adjustedRelativeTargetPos.magnitude > maxSpeedDistance)
+            {
+                adjustedRelativeTargetPos = adjustedRelativeTargetPos.normalized * maxSpeedDistance;
             }
 
 
