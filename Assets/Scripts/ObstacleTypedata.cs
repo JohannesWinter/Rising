@@ -18,6 +18,7 @@ public class ObstacleTypedata : MonoBehaviour
     public Rigidbody2D rb;
     public float startDelay;
     public bool resetOnLevelStart;
+    RigidbodyType2D rbType;
     public bool stopInMenu;
 
     Vector3 startPosition;
@@ -134,6 +135,7 @@ public class ObstacleTypedata : MonoBehaviour
         if (rb == null)
         {
             rb = gameObject.GetComponent<Rigidbody2D>();
+            if (rb != null) rbType = rb.bodyType;
         }
         if (stopInMenu) stopped = true;
     }
@@ -142,8 +144,9 @@ public class ObstacleTypedata : MonoBehaviour
     {
         if (currentDelay > 0)
         {
-
+            rb.bodyType = RigidbodyType2D.Kinematic;
             currentDelay -= Time.fixedDeltaTime;
+            if (currentDelay <= 0) rb.bodyType = rbType;
             return;
         }
         if (agilityType == ObstacleAgilityType.Moving)
