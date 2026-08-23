@@ -12,6 +12,7 @@ public class ParticleTriggerAccess : MonoBehaviour
 
     void OnParticleTrigger()
     {
+        print("Hellow there");
         if (ps == null) ps = gameObject.GetComponent<ParticleSystem>();
         int count = ps.GetTriggerParticles(
             ParticleSystemTriggerEventType.Enter,

@@ -18,6 +18,7 @@ public class PlayerController : MonoBehaviour
     float viewsizeY;
     public float maxForceDistance;
     public float maxSpeedDistance;
+    public float baseHitboxSize;
     Vector2 mousePos = Vector2.zero;
     Vector2 currentAirPush;
 
@@ -31,6 +32,7 @@ public class PlayerController : MonoBehaviour
         playerTransform = playerObject.transform;
         viewsizeX = Manager.m.playerCamera.orthographicSize * Manager.m.playerCamera.aspect;
         viewsizeY = Manager.m.playerCamera.orthographicSize;
+        ResetPlayerHitbox();
     }
 
     // Update is called once per frame
@@ -172,9 +174,9 @@ public class PlayerController : MonoBehaviour
 
     private void OnCollisionEnter2D(Collision2D collision)
     {
-        if (collision.gameObject.GetComponent<ObstacleTypedata>())
+        if (collision.collider.gameObject.GetComponent<ObstacleTypedata>())
         {
-            HandleObstacleCollision(collision.gameObject.GetComponent<ObstacleTypedata>());
+            HandleObstacleCollision(collision.collider.gameObject.GetComponent<ObstacleTypedata>());
         }
     }
 
@@ -242,6 +244,17 @@ public class PlayerController : MonoBehaviour
                     break;
             }
         }
+    }
+
+    public void UpdatePlayerHitbox(float size)
+    {
+        if (playerObject == null) return;
+        playerObject.GetComponent<CircleCollider2D>().radius = size;
+    }
+    public void ResetPlayerHitbox()
+    {
+        if (playerObject == null) return;
+        playerObject.GetComponent<CircleCollider2D>().radius = baseHitboxSize;
     }
 
     static float RandomOf(float[] randoms) //returns random number in Array

@@ -36,8 +36,18 @@ public class GameplayManager : MonoBehaviour
 
     bool showText;
     float points = 0;
+
+    [Header("Debug")]
+    public bool debug;
+    public float debug_levelStartHeight;
+    public int debug_maxHealth;
     void Start()
     {
+        if (debug)
+        {
+            maxHealth = debug_maxHealth;
+            currentHealth = debug_maxHealth;
+        }
         currentState = GameState.Menu;
         //currentLevel = 1;
         levelCancelButton.onClick.AddListener(Fail);
@@ -112,6 +122,13 @@ public class GameplayManager : MonoBehaviour
 
         foreach (ObstacleTypedata obs in Manager.m.obstacleTypeDatasResetOnLevelStart) obs.ResetObstacle();
         foreach (ObstacleTypedata obs in Manager.m.obstacleTypeDatasStopInMenu) obs.Continue();
+
+        // Debugging / Level tester
+        if (debug)
+        {
+            Manager.m.playerController.playerObject.transform.Translate(0, debug_levelStartHeight, 0);
+            Manager.m.playerCamera.gameObject.transform.Translate(0, debug_levelStartHeight, 0);
+        }
     }
 
     void Fail()

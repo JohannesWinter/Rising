@@ -7,6 +7,7 @@ using Unity.VisualScripting;
 using UnityEditor.Rendering;
 using UnityEngine;
 using UnityEngine.Windows;
+using UnityEngine.U2D;
 using static UnityEditor.Experimental.GraphView.GraphView;
 
 public class ObstacleTypedata : MonoBehaviour
@@ -22,6 +23,7 @@ public class ObstacleTypedata : MonoBehaviour
     Vector3 startPosition;
     Vector3 startScale;
     Vector3 startRotation;
+    private Matrix4x4 initialLocalMatrix;
 
     Vector3 startAbsPosition;
     Vector3 startAbsPartentAbbrevation;
@@ -38,7 +40,10 @@ public class ObstacleTypedata : MonoBehaviour
 
     [Header("PUSHABLE")]
     public List<PushableLine> PUSH_pushableLines;
-    public List<CurvedPushableLine> PUSH_curvedPushableLines;
+    public List<SpriteShapePushableLine> PUSH_spriteShapePushableLines;
+
+    public bool chained;
+    Vector2 parentAbsPosition = new Vector2(Mathf.Infinity, Mathf.Infinity);
 
     public Vector2 randomizedVelocityAddMin;
     public Vector2 randomizedVelocityAddMax;
@@ -80,11 +85,9 @@ public class ObstacleTypedata : MonoBehaviour
         startAbsPosition = gameObject.transform.position;
         startAbsPartentAbbrevation = startAbsPosition - transform.parent.position;
 
-        foreach (CurvedPushableLine c in PUSH_curvedPushableLines)
-        {
-            var lines = ConvertToPushableLines(c);
-            PUSH_pushableLines.AddRange(lines);
-        }
+        List<PushableLine> createdPushableLines = new List<PushableLine>();
+        createdPushableLines.AddRange(ConvertSpriteShapePushableLinesToPushableLines(PUSH_spriteShapePushableLines));
+        PUSH_pushableLines.AddRange(createdPushableLines);
         if (obstacleSpace == ObstacleSpace.World)
         {
             startPosition = transform.position;
@@ -96,22 +99,9 @@ public class ObstacleTypedata : MonoBehaviour
             startPosition = transform.localPosition;
             startScale = transform.localScale;
             startRotation = transform.localRotation.eulerAngles;
-
-            foreach (PushableLine p in PUSH_pushableLines)
-            {
-                Vector3 startWorldPos = transform.parent.TransformPoint(p.start + transform.localPosition);
-                Vector3 endWorldPos = transform.parent.TransformPoint(p.end + transform.localPosition);
-
-                p.start = startWorldPos - transform.position;
-                p.end = endWorldPos - transform.position;
-            }
+            initialLocalMatrix = Matrix4x4.TRS(startPosition, Quaternion.Euler(startRotation), startScale);
         }
         currentDelay = startDelay;
-        for (int i = 0; i < PUSH_pushableLines.Count; i++)
-        {
-            //PUSH_pushableLines[i].start += gameObject.transform.position;
-            //PUSH_pushableLines[i].end += gameObject.transform.position;
-        }
         if (agilityType == ObstacleAgilityType.Moving)
         {
             nextTargetEntry = 0;
@@ -152,6 +142,7 @@ public class ObstacleTypedata : MonoBehaviour
     {
         if (currentDelay > 0)
         {
+
             currentDelay -= Time.fixedDeltaTime;
             return;
         }
@@ -471,25 +462,70 @@ public class ObstacleTypedata : MonoBehaviour
         }
     }
 
+    Vector3 GetWorldStart(PushableLine line)
+    {
+        if (obstacleSpace == ObstacleSpace.World)
+        {
+            return startAbsPosition + line.start;
+        }
+
+        Vector3 pointInParentSpace = initialLocalMatrix.MultiplyPoint3x4(line.start);
+
+        return transform.parent != null
+            ? transform.parent.TransformPoint(pointInParentSpace)
+            : pointInParentSpace;
+    }
+
+    Vector3 GetWorldEnd(PushableLine line)
+    {
+        if (obstacleSpace == ObstacleSpace.World)
+        {
+            return startAbsPosition + line.end;
+        }
+
+        Vector3 pointInParentSpace = initialLocalMatrix.MultiplyPoint3x4(line.end);
+
+        return transform.parent != null
+            ? transform.parent.TransformPoint(pointInParentSpace)
+            : pointInParentSpace;
+    }
+
     void CorrectPush()
     {
-        if (PUSH_pushableLines.Count == 0)
+        Vector2 delta = Vector2.zero;
+        if (chained)
         {
-            return;
+            ObstacleTypedata parent = transform.parent != null
+                ? transform.parent.GetComponentInParent<ObstacleTypedata>()
+                : null;
+            if (parent == null)
+            {
+                Debug.LogWarning("Chained parent not found for Obstacle <" + gameObject.name + ">");
+            }
+            else
+            {
+                Vector2 newParentAbsPosition = parent.gameObject.transform.position;
+                if (parentAbsPosition.x != Mathf.Infinity)
+                {
+                    delta = newParentAbsPosition - parentAbsPosition;
+                }
+                parentAbsPosition = newParentAbsPosition;
+
+                rb.MovePosition(rb.position + delta);
+            }
         }
-        if (obstacleSpace == ObstacleSpace.Local)
-        {
-            startAbsPosition = transform.parent.transform.position + startAbsPartentAbbrevation;
-        }
+
+        if (PUSH_pushableLines.Count == 0) return;
 
         List<PushableLine> connected = new List<PushableLine>();
         PushableLine closestLine = null;
         Vector3 closestLinePoint = Vector3.zero;
         float closestDistance = float.MaxValue;
+
         for (int i = 0; i < PUSH_pushableLines.Count; i++)
         {
-            Vector3 currentStart = PUSH_pushableLines[i].start + startAbsPosition;
-            Vector3 currentEnd = PUSH_pushableLines[i].end + startAbsPosition;
+            Vector3 currentStart = GetWorldStart(PUSH_pushableLines[i]);
+            Vector3 currentEnd = GetWorldEnd(PUSH_pushableLines[i]);
 
             var distance = GetDistanceFromLine(transform.position, currentStart, currentEnd);
             var currentClosestPoint = GetClosestPointOnLine(transform.position, currentStart, currentEnd);
@@ -522,34 +558,33 @@ public class ObstacleTypedata : MonoBehaviour
                 closestLine = PUSH_pushableLines[i];
             }
         }
+
+        Vector3 closestStart = GetWorldStart(closestLine);
+        Vector3 closestEnd = GetWorldEnd(closestLine);
+
         if (followDirection)
         {
-            if (setRelativeRotation == false)
-            {
-                var startPoint = closestLine.start + startAbsPosition;
-                var direction = closestLine.end + startAbsPosition - startPoint;
+            var direction = closestEnd - closestStart;
+            var angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
 
-                var angle = Mathf.Atan2(direction.y, direction.x) * 180 / Mathf.PI;
+            if (!setRelativeRotation)
+            {
                 relativeRotation = gameObject.transform.rotation.eulerAngles.z - angle;
                 setRelativeRotation = true;
             }
             else
             {
-                var startPoint = closestLine.start + startAbsPosition;
-                var direction = closestLine.end + startAbsPosition - startPoint;
-
-                var angle = Mathf.Atan2(direction.y, direction.x) * 180 / Mathf.PI;
-                gameObject.transform.rotation = Quaternion.Euler(gameObject.transform.eulerAngles.x, gameObject.transform.eulerAngles.y, relativeRotation + angle);
+                gameObject.transform.rotation = Quaternion.Euler(
+                    gameObject.transform.eulerAngles.x,
+                    gameObject.transform.eulerAngles.y,
+                    relativeRotation + angle
+                );
             }
         }
-        rb.position = (closestLinePoint);
-        //gameObject.transform.position = closestLinePoint;
 
-        Vector3 forcePoint = closestLinePoint + new Vector3(rb.velocity.x, rb.velocity.y, 0);
+        rb.position = closestLinePoint + new Vector3(delta.x, delta.y, 0);
 
-        Vector3 closestStart = closestLine.start + startAbsPosition;
-        Vector3 closestEnd = closestLine.end + startAbsPosition;
-
+        Vector3 forcePoint = closestLinePoint + (Vector3)rb.velocity;
         Vector3 linearAdjustedForcePoint = GetClosestPointOnLine(forcePoint, closestStart, closestEnd);
 
         var startEndRelativeVecAbs = closestEnd - closestStart;
@@ -574,18 +609,22 @@ public class ObstacleTypedata : MonoBehaviour
         else
         {
             Vector3 linearAdjustedForceRelative = linearAdjustedForcePoint - transform.position;
-            rb.velocity = linearAdjustedForceRelative * (1 / Mathf.Pow(2,closestLine.drag)); // drag = 0 -> 1, 1 -> 1/2, 2 -> 1/4, 3 -> 1/8, ...
+            rb.velocity = linearAdjustedForceRelative * (1 / Mathf.Pow(2, closestLine.drag));
         }
+
         if (randomizedVelocityAddMax.magnitude != 0)
         {
             if (randomizedVelocityCooldown <= 0)
             {
                 randomizedVelocityCooldown = UnityEngine.Random.Range(randomizedVelocityCooldownMin, randomizedVelocityCooldownMax);
-                rb.velocity += new Vector2(UnityEngine.Random.Range(randomizedVelocityAddMin.x, randomizedVelocityAddMax.x),
-                    UnityEngine.Random.Range(randomizedVelocityAddMin.y, randomizedVelocityAddMax.y) );
+                rb.velocity += new Vector2(
+                    UnityEngine.Random.Range(randomizedVelocityAddMin.x, randomizedVelocityAddMax.x),
+                    UnityEngine.Random.Range(randomizedVelocityAddMin.y, randomizedVelocityAddMax.y)
+                );
             }
             randomizedVelocityCooldown -= Time.deltaTime;
         }
+
         if (randomizedTorqueAddMax != 0)
         {
             if (randomizedTorqueCooldown <= 0)
@@ -596,7 +635,6 @@ public class ObstacleTypedata : MonoBehaviour
             randomizedTorqueCooldown -= Time.deltaTime;
         }
 
-        //angular velocity
         if (reverseTorqueOnSlowdown)
         {
             if (Mathf.Abs(angularSpeedLastFrame) > reverseTorqueStart && Mathf.Abs(rb.angularVelocity) < reverseTorqueStart)
@@ -604,7 +642,6 @@ public class ObstacleTypedata : MonoBehaviour
                 rb.angularVelocity = reverseTorqueStrength * Mathf.Sign(angularSpeedLastFrame) * -1;
             }
         }
-
 
         if (Mathf.Abs(rb.angularVelocity) < minAngularSpeed && Mathf.Abs(angularSpeedLastFrame) > Mathf.Abs(rb.angularVelocity))
         {
@@ -731,44 +768,107 @@ public class ObstacleTypedata : MonoBehaviour
                 return t;
         }
     }
-
-    public List<PushableLine> ConvertToPushableLines(CurvedPushableLine curvedLine)
+    public List <PushableLine> ConvertSpriteShapePushableLinesToPushableLines(List<SpriteShapePushableLine> spriteShapePushableLines)
     {
-        List<PushableLine> segments = new List<PushableLine>();
-
-        int segmentCount = Mathf.Max(1, Mathf.RoundToInt(curvedLine.tiling) + 1);
-
-        Vector3 fullDirection = curvedLine.end - curvedLine.start;
-        float totalDistance = fullDirection.magnitude;
-
-        Vector3 dir = fullDirection.normalized;
-
-        Vector3 sideDirection = new Vector3(-dir.y, dir.x, 0f);
-
-        Vector3 lastPoint = curvedLine.start;
-
-        for (int i = 1; i <= segmentCount; i++)
+        List<PushableLine> allLines = new List<PushableLine>();
+        for (int i = 0; i < spriteShapePushableLines.Count; i++)
         {
-            float t = (float)i / segmentCount;
+            var curLines = ConvertSpriteShapeToPushableLines(spriteShapePushableLines[i].tiling, spriteShapePushableLines[i].spriteShape, spriteShapePushableLines[i].drag);
+            allLines.AddRange(curLines);
+        }
+        return allLines;
+    }
+    public List<PushableLine> ConvertSpriteShapeToPushableLines(int tiling, SpriteShapeController spriteShapeController, float drag)
+    {
+        List<PushableLine> pushableLines = new List<PushableLine>();
+        List<Vector3> relativePoints = GetPathPointsRelativeTo(this.gameObject.transform, tiling + 1, spriteShapeController);
+        for (int i = 0; i < relativePoints.Count - 1; i++)
+        {
+            PushableLine newLine = new PushableLine();
+            newLine.start = relativePoints[i];
+            newLine.end = relativePoints[i + 1];
+            newLine.drag = drag;
+            pushableLines.Add(newLine);
+        }
+        return pushableLines;
+    }
 
-            Vector3 linearPoint = Vector3.Lerp(curvedLine.start, curvedLine.end, t);
+    public List<Vector3> GetPathPointsRelativeTo(Transform targetTransform, int pointCount, SpriteShapeController spriteShapeController)
+    {
+        List<Vector3> relativePoints = new List<Vector3>();
+        if (targetTransform == null) return relativePoints;
 
-            float curveOffset = curvedLine.curve.Evaluate(t) * totalDistance;
-            Vector3 finalPoint = linearPoint + (sideDirection * curveOffset);
+        List<Vector3> worldPoints = GetPathPoints(pointCount, spriteShapeController);
 
-            float currentDrag = curvedLine.drag.Evaluate(t);
-
-            segments.Add(new PushableLine
+        foreach (Vector3 worldPoint in worldPoints)
+        {
+            if (obstacleSpace == ObstacleSpace.World)
             {
-                start = lastPoint,
-                end = finalPoint,
-                drag = currentDrag
-            });
-
-            lastPoint = finalPoint;
+                Vector3 worldOffset = worldPoint - startAbsPosition;
+                relativePoints.Add(worldOffset);
+            }
+            else
+            {
+                Vector3 localPoint = targetTransform.InverseTransformPoint(worldPoint);
+                relativePoints.Add(localPoint);
+            }
         }
 
-        return segments;
+        return relativePoints;
+    }
+    public List<Vector3> GetPathPoints(int pointCount, SpriteShapeController spriteShapeController)
+    {
+        List<Vector3> points = new List<Vector3>();
+        if (spriteShapeController == null || pointCount < 2) return points;
+
+        Spline spline = spriteShapeController.spline;
+        int controlPointCount = spline.GetPointCount();
+        if (controlPointCount < 2) return points;
+
+        bool isOpen = spline.isOpenEnded;
+        int numSegments = isOpen ? controlPointCount - 1 : controlPointCount;
+
+        for (int i = 0; i < pointCount; i++)
+        {
+            float t = (float)i / (pointCount - 1);
+            float totalProgress = t * numSegments;
+
+            int segmentIndex = Mathf.FloorToInt(totalProgress);
+            if (segmentIndex >= numSegments) segmentIndex = numSegments - 1;
+
+            float segmentT = totalProgress - segmentIndex;
+
+            int p0Index = segmentIndex;
+            int p1Index = (segmentIndex + 1) % controlPointCount;
+
+            Vector3 p0 = spline.GetPosition(p0Index);
+            Vector3 p1 = spline.GetPosition(p1Index);
+            Vector3 p0Tangent = p0 + spline.GetRightTangent(p0Index);
+            Vector3 p1Tangent = p1 + spline.GetLeftTangent(p1Index);
+
+            Vector3 localPoint = CalculateCubicBezierPoint(p0, p0Tangent, p1Tangent, p1, segmentT);
+
+            Vector3 worldPoint = spriteShapeController.transform.TransformPoint(localPoint);
+            points.Add(worldPoint);
+        }
+
+        return points;
+    }
+
+    private Vector3 CalculateCubicBezierPoint(Vector3 p0, Vector3 p1, Vector3 p2, Vector3 p3, float t)
+    {
+        float u = 1f - t;
+        float tt = t * t;
+        float uu = u * u;
+        float uuu = uu * u;
+        float ttt = tt * t;
+
+        Vector3 point = uuu * p0;
+        point += 3f * uu * t * p1;
+        point += 3f * u * tt * p2;
+        point += ttt * p3;
+
+        return point;
     }
 }
 
@@ -889,15 +989,9 @@ public class PortalData
     public float stunTimer;
 }
 [Serializable]
-public class CurvedPushableLine
+public class SpriteShapePushableLine
 {
-    public Vector3 start;
-    public Vector3 end;
-    public float tiling;
-    [SerializeField]
-    private AnimationCurve _curve = new AnimationCurve(new Keyframe(0, 0), new Keyframe(1, 0));
-    [SerializeField]
-    private AnimationCurve _drag = new AnimationCurve(new Keyframe(0, 0), new Keyframe(1, 0));
-    public AnimationCurve curve => _curve;
-    public AnimationCurve drag => _drag;
+    public SpriteShapeController spriteShape;
+    public int tiling;
+    public float drag;
 }

@@ -35,6 +35,14 @@ public class Worldbuilder : MonoBehaviour
                 currentLevelSpeed = Mathf.Max((distanceFromFinish / slowDownCameraDistance) * levelList[Manager.m.gameplayManager.currentLevel - 1].speed, minEndCameraSpeed);
             }
             Manager.m.playerController.currentGeneralSpeed = currentLevelSpeed; 
+            if (levelList[Manager.m.gameplayManager.currentLevel - 1].editPlayerHitbox)
+            {
+                Manager.m.playerController.UpdatePlayerHitbox(levelList[Manager.m.gameplayManager.currentLevel - 1].playerHitboxSize);
+            }
+            else
+            {
+                Manager.m.playerController.ResetPlayerHitbox();
+            }
             UpdateHeight();
         }
         else
@@ -111,4 +119,7 @@ public class Level
     public float height;
     public float speed;
     public string name;
+    [Header("Optional")]
+    public bool editPlayerHitbox;
+    public float playerHitboxSize;
 }
