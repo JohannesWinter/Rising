@@ -11,15 +11,42 @@ public class AbilityIndicator : MonoBehaviour
     [Header("PaticleSystem")]
     public ParticleSystem particle_particleSystem;
     public float particle_amount;
-    
-    public void ExecuteIndication(float duration)
+
+    [Header("Obstacle")]
+    public ObstacleTypedata obsData;
+    public bool waitForAbilityEnd;
+    public int waitingMovementElementIndex;
+    public float abilityDurationMultiplier = 1;
+
+    [SerializeField] private bool locked = false;
+
+    private void Start()
     {
+        if (waitForAbilityEnd && obsData != null)
+        {
+            Manager.DisableAllColliders(obsData.gameObject);
+            Manager.DisableAllRenderers(obsData.gameObject);
+        }
+    }
+
+    public void ExecuteIndication(float duration, float abilityDuration)
+    {
+        if (locked)
+        {
+            Debug.LogWarning("Warning - Tried to execute ability indicator while already indicating");
+            return;
+        }
+        locked = true;
         switch (type)
         {
             case AbilityIndicationType.None:
+                locked = false;
                 break;
             case AbilityIndicationType.ParticleSystem:
                 StartCoroutine(ExecuteIndicationParticleSystem(duration));
+                break;
+            case AbilityIndicationType.Obstacle:
+                StartCoroutine(ExecuteIndicationObstacle(duration, abilityDuration));
                 break;
         }
     }
@@ -37,11 +64,37 @@ public class AbilityIndicator : MonoBehaviour
         yield return new WaitForSeconds(duration);
 
         emission.rateOverTime = new ParticleSystem.MinMaxCurve(0);
+        locked = false;
     } 
+    public IEnumerator ExecuteIndicationObstacle(float duration, float abilityDuration)
+    {
+        Manager.EnableAllColliders(obsData.gameObject);
+        Manager.EnableAllRenderers(obsData.gameObject);
+        obsData.speedMultiplier = 1 / duration;
+        if (waitForAbilityEnd) obsData.MOVING_movementTargets[waitingMovementElementIndex].duration = abilityDuration * abilityDurationMultiplier;
+        obsData.triggerd = true;
+        yield return new WaitForSeconds(duration);
+        if (waitForAbilityEnd)
+        {
+            while (obsData.HasMovementTarget() && Manager.m.gameplayManager.currentState != GameState.Resetting && Manager.m.gameplayManager.currentState != GameState.Menu)
+            {
+                yield return null;
+            }
+        }
+        Manager.DisableAllColliders(obsData.gameObject);
+        Manager.DisableAllRenderers(obsData.gameObject);
+        locked = false;
+    }
+
+    public bool Locked()
+    {
+        return locked;
+    }
 }
 
 public enum AbilityIndicationType
 {
     None,
     ParticleSystem,
+    Obstacle,
 }

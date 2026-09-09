@@ -102,6 +102,10 @@ public class Boss1 : MonoBehaviour, BossPerformer
         }
         return true;
     }
+    public void Notify(int abilityPos)
+    {
+        return;
+    }
 
 
     IEnumerator SetStage1()
@@ -154,9 +158,4 @@ public class Boss1 : MonoBehaviour, BossPerformer
         boss.runCooldowns = false;
         yield break;
     }
-}
-
-public interface BossPerformer
-{
-    public bool AllowAbility(int abilityPos, float[] durations);
 }

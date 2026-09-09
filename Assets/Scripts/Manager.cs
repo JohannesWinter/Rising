@@ -65,4 +65,51 @@ public class Manager : MonoBehaviour
             Destroy(this);
         }
     }
+    public static void DisableAllColliders(GameObject g)
+    {
+        if (g == null) return;
+
+        foreach (Collider c in g.GetComponentsInChildren<Collider>(true))
+        {
+            c.enabled = false;
+        }
+        foreach (Collider2D c in g.GetComponentsInChildren<Collider2D>(true))
+        {
+            c.enabled = false;
+        }
+    }
+
+    public static void EnableAllColliders(GameObject g)
+    {
+        if (g == null) return;
+
+        foreach (Collider c in g.GetComponentsInChildren<Collider>(true))
+        {
+            c.enabled = true;
+        }
+        foreach (Collider2D c in g.GetComponentsInChildren<Collider2D>(true))
+        {
+            c.enabled = true;
+        }
+    }
+
+    public static void DisableAllRenderers(GameObject g)
+    {
+        if (g == null) return;
+
+        foreach (Renderer r in g.GetComponentsInChildren<Renderer>(true))
+        {
+            r.enabled = false;
+        }
+    }
+
+    public static void EnableAllRenderers(GameObject g)
+    {
+        if (g == null) return;
+
+        foreach (Renderer r in g.GetComponentsInChildren<Renderer>(true))
+        {
+            r.enabled = true;
+        }
+    }
 }

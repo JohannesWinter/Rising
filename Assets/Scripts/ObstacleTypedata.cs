@@ -19,6 +19,7 @@ public class ObstacleTypedata : MonoBehaviour
     public float startDelay;
     public bool resetOnLevelStart;
     RigidbodyType2D rbType;
+    float rbGravity;
     public bool stopInMenu;
 
     Vector3 startPosition;
@@ -34,6 +35,7 @@ public class ObstacleTypedata : MonoBehaviour
     public ObstacleTriggerType triggerType;
     public List<Collider2D> colliders;
     public bool triggerd = false;
+    public bool resetAfterFinish = true;
     bool singleUsed = false;
     int nextTargetEntry;
     ObstacleMovementTarget currentTarget;
@@ -135,8 +137,9 @@ public class ObstacleTypedata : MonoBehaviour
         if (rb == null)
         {
             rb = gameObject.GetComponent<Rigidbody2D>();
-            if (rb != null) rbType = rb.bodyType;
         }
+        if (rb != null) rbType = rb.bodyType;
+        if (rb != null) rbGravity = rb.gravityScale;
         if (stopInMenu) stopped = true;
     }
 
@@ -258,6 +261,17 @@ public class ObstacleTypedata : MonoBehaviour
         if (currentTarget == null && triggerd)
         {
             triggerd = false;
+            if (obstacleSpace == ObstacleSpace.World)
+            {
+                transform.position = startPosition;
+                transform.rotation = Quaternion.Euler(startRotation);
+            }
+            else
+            {
+                transform.localPosition = startPosition;
+                transform.localRotation = Quaternion.Euler(startRotation);
+            }
+            transform.localScale = startScale;
             string targetStr = JsonUtility.ToJson(MOVING_movementTargets[0]);
             currentTarget = JsonUtility.FromJson<ObstacleMovementTarget>(targetStr);
             if (obstacleSpace == ObstacleSpace.World)
@@ -296,7 +310,7 @@ public class ObstacleTypedata : MonoBehaviour
             }
             nextTargetEntry = 1;
         }
-        if (currentTarget != null && currentTarget.remainingDuration < 0)
+        while (currentTarget != null && currentTarget.remainingDuration <= 0)
         {
             if (obstacleSpace == ObstacleSpace.World)
             {
@@ -316,17 +330,20 @@ public class ObstacleTypedata : MonoBehaviour
             if (nextTargetEntry >= MOVING_movementTargets.Count)
             {
                 nextTargetEntry = 0;
-                if (obstacleSpace == ObstacleSpace.World)
+                if (resetAfterFinish)
                 {
-                    transform.position = startPosition;
-                    transform.rotation = Quaternion.Euler(startRotation);
+                    if (obstacleSpace == ObstacleSpace.World)
+                    {
+                        transform.position = startPosition;
+                        transform.rotation = Quaternion.Euler(startRotation);
+                    }
+                    else
+                    {
+                        transform.localPosition = startPosition;
+                        transform.localRotation = Quaternion.Euler(startRotation);
+                    }
+                    transform.localScale = startScale;
                 }
-                else
-                {
-                    transform.localPosition = startPosition;
-                    transform.localRotation = Quaternion.Euler(startRotation);
-                }
-                transform.localScale = startScale;
                 currentTarget = null;
                 rb.velocity = Vector3.zero;
                 rb.angularVelocity = 0;
@@ -495,6 +512,12 @@ public class ObstacleTypedata : MonoBehaviour
 
     void CorrectPush()
     {
+        if (triggerd)
+        {
+            triggerd = false;
+            ResetObstacle();
+        }
+        rb.gravityScale = rbGravity * speedMultiplier * speedMultiplier; // gnew = gold * speedIncrease^2
         Vector2 delta = Vector2.zero;
         if (chained)
         {
@@ -714,6 +737,11 @@ public class ObstacleTypedata : MonoBehaviour
         }
 
         return false;
+    }
+
+    public bool HasMovementTarget()
+    {
+        return currentTarget != null;
     }
 
     Vector3 GetClosestPointOnLine(Vector3 point, Vector3 linePoint1, Vector3 linePoint2)
