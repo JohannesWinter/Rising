@@ -8,6 +8,8 @@ public class Manager : MonoBehaviour
 
     public GameObject world;
     public Camera playerCamera;
+    public GameObject playerCameraSpace;
+    public GameObject playerCameraObj;
     public GameplayManager gameplayManager;
     public Worldbuilder worldBuilder;
     public PlayerController playerController;

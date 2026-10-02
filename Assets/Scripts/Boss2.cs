@@ -30,7 +30,7 @@ public class Boss2 : MonoBehaviour, BossPerformer
 
     private void Start()
     {
-        cam = Manager.m.playerCamera.gameObject.transform;
+        cam = Manager.m.playerCameraSpace.gameObject.transform;
     }
     // Update is called once per frame
     void Update()

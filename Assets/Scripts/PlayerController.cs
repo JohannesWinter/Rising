@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using Unity.VisualScripting;
@@ -25,9 +26,19 @@ public class PlayerController : MonoBehaviour
     float stunTimer;
 
     Vector3 targetPos;
+
+    Vector3 cameraNormalPosition = Vector3.zero;
+    Quaternion cameraNormalRotation;
+    List<vector3Wrapper> cameraShakeOffsets = new List<vector3Wrapper>();
+    List<vector3Wrapper> cameraRotationShakeOffsets = new List<vector3Wrapper>();
+
+    [Header("Debug")]
+    public bool debug_shake;
     // Start is called before the first frame update
     void Start()
     {
+        cameraNormalPosition = Manager.m.playerCameraObj.transform.localPosition;
+        cameraNormalRotation = Manager.m.playerCameraObj.transform.localRotation;
         res = Screen.currentResolution;
         playerTransform = playerObject.transform;
         viewsizeX = Manager.m.playerCamera.orthographicSize * Manager.m.playerCamera.aspect;
@@ -43,6 +54,8 @@ public class PlayerController : MonoBehaviour
 
     void FixedUpdate()
     {
+        //if (debug_shake) CameraShake(0.3f, 0.5f);
+        debug_shake = false;
         if (Manager.m.gameplayManager.currentState == GameState.Resetting)
         {
             this.GetComponent<Collider2D>().enabled = false;
@@ -102,7 +115,7 @@ public class PlayerController : MonoBehaviour
     {
         if (Manager.m.gameplayManager.currentState != GameState.Stopped && Manager.m.gameplayManager.currentState != GameState.Resetting && stunTimer <= 0)
         {
-            Vector3 adjustedTargetPos = targetPos + Manager.m.playerCamera.transform.localPosition;
+            Vector3 adjustedTargetPos = targetPos + Manager.m.playerCameraSpace.transform.localPosition;
             Vector3 adjustedRelativeTargetPos = adjustedTargetPos - playerTransform.localPosition;
             adjustedRelativeTargetPos.z = 0;
 
@@ -142,33 +155,144 @@ public class PlayerController : MonoBehaviour
 
     void UpdateCameraMovement()
     {
-        Manager.m.playerCamera.gameObject.transform.Translate(Vector3.up * Time.fixedDeltaTime * currentGeneralSpeed);
+        Manager.m.playerCameraSpace.transform.Translate(
+            Vector3.up * Time.fixedDeltaTime * currentGeneralSpeed
+        );
+
+        Vector3 totalCameraOffset = Vector3.zero;
+
+        foreach (vector3Wrapper offset in cameraShakeOffsets)
+            totalCameraOffset += offset.vector;
+
+        Manager.m.playerCameraObj.transform.localPosition =
+            cameraNormalPosition + totalCameraOffset;
+
+
+        Vector3 totalRotationOffset = Vector3.zero;
+
+        foreach (vector3Wrapper offset in cameraRotationShakeOffsets)
+            totalRotationOffset += offset.vector;
+
+        Manager.m.playerCameraObj.transform.localRotation =
+            cameraNormalRotation *
+            Quaternion.Euler(totalRotationOffset);
     }
 
-    //void CollisionDetection()
-    //{
-    //    currentAirPush = Vector2.zero;
-    //    Collider2D[] col = new Collider2D[5]; //5 = max detectable colliders
-    //    ContactFilter2D filter = new ContactFilter2D();
-    //    filter.useTriggers = true;
-    //    Physics2D.OverlapCollider(GetComponent<CircleCollider2D>(), filter, col);
-    //    for (int i = 0; i < col.Length; i++)
-    //    {
-    //        if (col[i] != null)
-    //        {
-    //            if (col[i].gameObject.GetComponent<ObstacleTypedata>())
-    //            {
-    //                HandleObstacleCollision(col[i].gameObject.GetComponent<ObstacleTypedata>());
-    //            } 
-    //        }
-    //        else
-    //        {
-    //            break;
-    //        }
-    //    }
-    //}
+    public void CameraShake(
+        float intensity,
+        float duration,
+        float frequenzy,
+        float decreasePower = 0,
+        float rotationalIntensity = 0,
+        float rotationalDuration = 0,
+        float rotationalFrequenzy = 0)
+    {
+        StartCoroutine(ExecuteCameraShake(
+            intensity,
+            duration,
+            frequenzy,
+            decreasePower,
+            rotationalIntensity,
+            rotationalDuration,
+            rotationalFrequenzy
+        ));
+    }
 
-    void OnTriggerEnter(Collider collision){
+    IEnumerator ExecuteCameraShake(
+        float intensity,
+        float duration,
+        float frequenzy,
+        float decreasePower,
+        float rotationalIntensity,
+        float rotationalDuration,
+        float rotationalFrequenzy)
+    {
+        if (duration <= 0 || decreasePower < 0 || intensity == 0)
+        {
+            yield break;
+        }
+
+        float elapsed = 0f;
+
+        float seedX = UnityEngine.Random.value * 1000f;
+        float seedY = UnityEngine.Random.value * 1000f;
+        float seedRotation = UnityEngine.Random.value * 1000f;
+
+        vector3Wrapper shake = vector3Wrapper.zero();
+        cameraShakeOffsets.Add(shake);
+
+        vector3Wrapper rotationShake = vector3Wrapper.zero();
+
+        if (rotationalIntensity != 0 && rotationalDuration > 0)
+        {
+            cameraRotationShakeOffsets.Add(rotationShake);
+        }
+
+        while (elapsed < duration)
+        {
+            float percentageLeft =
+                1f - Mathf.Clamp01(elapsed / duration);
+
+            float strength =
+                Mathf.Pow(percentageLeft, decreasePower + 1);
+
+            // Translation
+            float x =
+                (Mathf.PerlinNoise(seedX, elapsed * frequenzy) - 0.5f) * 2f;
+
+            float y =
+                (Mathf.PerlinNoise(seedY, elapsed * frequenzy) - 0.5f) * 2f;
+
+            shake.vector =
+                new Vector3(x, y, 0f) * intensity * strength;
+
+
+            // Rotation
+            if (rotationalIntensity != 0 &&
+                elapsed < rotationalDuration)
+            {
+                float rotationalPercentageLeft =
+                    1f - Mathf.Clamp01(elapsed / rotationalDuration);
+
+                float rotationalStrength =
+                    Mathf.Pow(
+                        rotationalPercentageLeft,
+                        decreasePower + 1
+                    );
+
+                float rotation =
+                    (Mathf.PerlinNoise(
+                        seedRotation,
+                        elapsed * rotationalFrequenzy
+                    ) - 0.5f) * 2f;
+
+                rotationShake.vector =
+                    new Vector3(
+                        0f,
+                        0f,
+                        rotation * rotationalIntensity * rotationalStrength
+                    );
+            }
+            else
+            {
+                rotationShake.vector = Vector3.zero;
+            }
+
+            elapsed += Time.deltaTime;
+
+            yield return null;
+        }
+
+        cameraShakeOffsets.Remove(shake);
+
+        if (rotationalIntensity != 0 && rotationalDuration > 0)
+        {
+            cameraRotationShakeOffsets.Remove(rotationShake);
+        }
+    }
+
+    void OnTriggerEnter(Collider collision)
+    {
     }
 
 
@@ -192,7 +316,7 @@ public class PlayerController : MonoBehaviour
                     dead = true;
                     break;
                 case ObstacleCollisionType.Air:
-                    currentAirPush += obs.AIR_airFlow.AIR_force * obs.AIR_airFlow.AIR_currentPercentageAirStrength + obs.AIR_airFlow.AIR_force * RandomOf(new float[] { -1, 1 }) * Random.Range(0, obs.AIR_airFlow.AIR_variety) * obs.AIR_airFlow.AIR_currentPercentageAirStrength;
+                    currentAirPush += obs.AIR_airFlow.AIR_force * obs.AIR_airFlow.AIR_currentPercentageAirStrength + obs.AIR_airFlow.AIR_force * RandomOf(new float[] { -1, 1 }) * UnityEngine.Random.Range(0, obs.AIR_airFlow.AIR_variety) * obs.AIR_airFlow.AIR_currentPercentageAirStrength;
                     if (obs.AIR_airFlow.AIR_fullStrengthTime > 0) obs.AIR_airFlow.AIR_currentPercentageAirStrength += Time.fixedDeltaTime / obs.AIR_airFlow.AIR_fullStrengthTime;
                     else obs.AIR_airFlow.AIR_currentPercentageAirStrength = 1;
                     break;
@@ -229,7 +353,7 @@ public class PlayerController : MonoBehaviour
                     dead = true;
                     break;
                 case ObstacleCollisionType.Air:
-                    currentAirPush += obs.AIR_airFlow.AIR_force * obs.AIR_airFlow.AIR_currentPercentageAirStrength + obs.AIR_airFlow.AIR_force * RandomOf(new float[] { -1, 1 }) * Random.Range(0, obs.AIR_airFlow.AIR_variety) * obs.AIR_airFlow.AIR_currentPercentageAirStrength;
+                    currentAirPush += obs.AIR_airFlow.AIR_force * obs.AIR_airFlow.AIR_currentPercentageAirStrength + obs.AIR_airFlow.AIR_force * RandomOf(new float[] { -1, 1 }) * UnityEngine.Random.Range(0, obs.AIR_airFlow.AIR_variety) * obs.AIR_airFlow.AIR_currentPercentageAirStrength;
                     if (obs.AIR_airFlow.AIR_fullStrengthTime > 0) obs.AIR_airFlow.AIR_currentPercentageAirStrength += Time.fixedDeltaTime / obs.AIR_airFlow.AIR_fullStrengthTime;
                     else obs.AIR_airFlow.AIR_currentPercentageAirStrength = 1;
                     break;
@@ -260,6 +384,23 @@ public class PlayerController : MonoBehaviour
 
     static float RandomOf(float[] randoms) //returns random number in Array
     {
-        return randoms[Random.Range(0, randoms.Length)];
+        return randoms[UnityEngine.Random.Range(0, randoms.Length)];
+    }
+    private class vector3Wrapper
+    {
+        public vector3Wrapper() { }
+        public vector3Wrapper(Vector3 vector)
+        {
+            this.vector = vector;
+        }
+        public vector3Wrapper(float x, float y, float z)
+        {
+            this.vector = new Vector3(x, y, z);
+        }
+        public Vector3 vector;
+        public static vector3Wrapper zero()
+        {
+            return new vector3Wrapper();
+        }
     }
 }

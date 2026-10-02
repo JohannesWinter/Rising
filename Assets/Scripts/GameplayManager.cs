@@ -54,7 +54,7 @@ public class GameplayManager : MonoBehaviour
         levelCancelButton.onClick.AddListener(Fail);
         levelStopMenu.SetActive(false);
         Manager.m.worldBuilder.Reset();
-        Manager.m.playerCamera.transform.localPosition = new Vector3(0,0,-10);
+        Manager.m.playerCameraSpace.transform.localPosition = new Vector3(0,0,-10);
         Manager.m.playerController.playerObject.transform.localPosition = new Vector3(0,0, Manager.m.playerController.playerObject.transform.localPosition.z);
     }
 
@@ -128,7 +128,7 @@ public class GameplayManager : MonoBehaviour
         if (debug)
         {
             Manager.m.playerController.playerObject.transform.Translate(0, debug_levelStartHeight, 0);
-            Manager.m.playerCamera.gameObject.transform.Translate(0, debug_levelStartHeight, 0);
+            Manager.m.playerCameraSpace.gameObject.transform.Translate(0, debug_levelStartHeight, 0);
         }
     }
 
@@ -155,7 +155,7 @@ public class GameplayManager : MonoBehaviour
         currentLevel += 1;
         Manager.m.worldBuilder.Reset();
         currentState = GameState.Menu;
-        Manager.m.playerCamera.transform.localPosition = new Vector3(0,0,-10);
+        Manager.m.playerCameraSpace.transform.localPosition = new Vector3(0,0,-10);
         levelStopMenu.SetActive(false);
         currentHealth = maxHealth;
         foreach (ObstacleTypedata obs in Manager.m.obstacleTypeDatasStopInMenu) obs.Stop();
@@ -176,7 +176,7 @@ public class GameplayManager : MonoBehaviour
 
     bool PlayerOutOfBounds()
     {
-        if (Manager.m.playerController.gameObject.transform.localPosition.y < Manager.m.playerCamera.gameObject.transform.localPosition.y - Manager.m.playerCamera.orthographicSize * 1.2)
+        if (Manager.m.playerController.gameObject.transform.localPosition.y < Manager.m.playerCameraSpace.gameObject.transform.localPosition.y - Manager.m.playerCamera.orthographicSize * 1.2)
         {
             return true;
         }
@@ -228,7 +228,7 @@ public class GameplayManager : MonoBehaviour
         Vector3 playerSize = playerTrf.localScale;
         Light2D playerLight = Manager.m.playerController.playerObject.GetComponent<Light2D>();
         float playerLightIntensity = playerLight.intensity;
-        Transform cam = Manager.m.playerCamera.transform;
+        Transform cam = Manager.m.playerCameraSpace.transform;
         Vector3 aimPosition = new Vector3(cam.position.x, Manager.m.worldBuilder.GetCurrentMinHeight(), cam.position.z);
         Vector3 startPosition = cam.position;
         Vector3 aimVector = aimPosition - startPosition;

@@ -29,7 +29,7 @@ public class Worldbuilder : MonoBehaviour
         if (running)
         {
             float currentLevelSpeed = levelList[Manager.m.gameplayManager.currentLevel - 1].speed;
-            float distanceFromFinish = Mathf.Abs(currentMaxHeight - Manager.m.playerCamera.transform.position.y);
+            float distanceFromFinish = Mathf.Abs(currentMaxHeight - Manager.m.playerCameraSpace.transform.position.y);
             if (distanceFromFinish < slowDownCameraDistance)
             {
                 currentLevelSpeed = Mathf.Max((distanceFromFinish / slowDownCameraDistance) * levelList[Manager.m.gameplayManager.currentLevel - 1].speed, minEndCameraSpeed);
@@ -50,7 +50,7 @@ public class Worldbuilder : MonoBehaviour
             Manager.m.playerController.currentGeneralSpeed = 0;
         }   
 
-        if (running == true && Manager.m.playerCamera.transform.position.y > currentMaxHeight)
+        if (running == true && Manager.m.playerCameraSpace.transform.position.y > currentMaxHeight)
         {
             finished = true;
         }
@@ -62,10 +62,10 @@ public class Worldbuilder : MonoBehaviour
         running = false;
         finished = false;
         Vector3 oldPlayerPosition = Manager.m.playerController.playerObject.transform.position;
-        Vector3 oldCameraPosition = Manager.m.playerCamera.transform.position;
+        Vector3 oldCameraPosition = Manager.m.playerCameraSpace.transform.position;
         playerSpace.localPosition = new Vector3(0, currentMinHeight, 0);
         Manager.m.playerController.playerObject.transform.position = oldPlayerPosition;
-        Manager.m.playerCamera.transform.position = oldCameraPosition;
+        Manager.m.playerCameraSpace.transform.position = oldCameraPosition;
     }
 
 
