@@ -29,8 +29,12 @@ public class AbilityIndicator : MonoBehaviour
         }
     }
 
-    public void ExecuteIndication(float duration, float abilityDuration)
+    public void ExecuteIndication(float duration, float abilityDuration, bool ignoreGamestate = false)
     {
+        if (Manager.m.gameplayManager.currentState != GameState.Running && ignoreGamestate == false)
+        {
+            return;
+        }
         if (locked)
         {
             Debug.LogWarning("Warning - Tried to execute ability indicator while already indicating");
@@ -51,8 +55,21 @@ public class AbilityIndicator : MonoBehaviour
         }
     }
 
-    public void StopExecution()
+    public void EndExecution()
     {
+        switch (type)
+        {
+            case AbilityIndicationType.None:
+                break;
+            case AbilityIndicationType.ParticleSystem:
+                var emission = particle_particleSystem.emission;
+                emission.rateOverTime = new ParticleSystem.MinMaxCurve(0);
+                break;
+            case AbilityIndicationType.Obstacle:
+                Manager.DisableAllColliders(obsData.gameObject);
+                Manager.DisableAllRenderers(obsData.gameObject);
+                break;
+        }
         return; //todo
     }
 
@@ -76,7 +93,7 @@ public class AbilityIndicator : MonoBehaviour
         yield return new WaitForSeconds(duration);
         if (waitForAbilityEnd)
         {
-            while (obsData.HasMovementTarget() && Manager.m.gameplayManager.currentState != GameState.Resetting && Manager.m.gameplayManager.currentState != GameState.Menu)
+            while (obsData.HasMovementTarget() && Manager.m.gameplayManager.currentState != GameState.Menu)
             {
                 yield return null;
             }
@@ -85,7 +102,6 @@ public class AbilityIndicator : MonoBehaviour
         Manager.DisableAllRenderers(obsData.gameObject);
         locked = false;
     }
-
     public bool Locked()
     {
         return locked;

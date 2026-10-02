@@ -25,9 +25,13 @@ public class Boss1 : MonoBehaviour, BossPerformer
     // Update is called once per frame
     void Update()
     {
-        if (Manager.m.gameplayManager.currentLevel == level && (Manager.m.gameplayManager.currentState != GameState.Menu))
+        if (Manager.m.gameplayManager.currentLevel == level && Manager.m.gameplayManager.currentState != GameState.Menu)
         {
             boss.runGeneral = true;
+            if (Manager.m.gameplayManager.currentState == GameState.Resetting)
+            {
+                boss.runAbilities = false;
+            }
             if (cam.localPosition.y > section1Start && startedSection1 == false)
             {
                 startedSection1 = true;

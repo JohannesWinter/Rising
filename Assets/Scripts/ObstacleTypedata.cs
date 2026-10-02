@@ -263,13 +263,15 @@ public class ObstacleTypedata : MonoBehaviour
             triggerd = false;
             if (obstacleSpace == ObstacleSpace.World)
             {
-                transform.position = startPosition;
+                //transform.position = startPosition;
                 transform.rotation = Quaternion.Euler(startRotation);
+                rb.position = startPosition;
             }
             else
             {
-                transform.localPosition = startPosition;
+                //transform.localPosition = startPosition;
                 transform.localRotation = Quaternion.Euler(startRotation);
+                rb.position = transform.parent.TransformPoint(startPosition);
             }
             transform.localScale = startScale;
             string targetStr = JsonUtility.ToJson(MOVING_movementTargets[0]);
@@ -312,15 +314,21 @@ public class ObstacleTypedata : MonoBehaviour
         }
         while (currentTarget != null && currentTarget.remainingDuration <= 0)
         {
+            Vector3 newStartPosition = Vector3.zero;
+            Quaternion newStartRotation = Quaternion.identity;
             if (obstacleSpace == ObstacleSpace.World)
             {
-                transform.position = currentTarget.startPosition + currentTarget.relativePosition;
-                transform.rotation = Quaternion.Euler(currentTarget.startRotation + currentTarget.relativeRotation);
+                //transform.position = currentTarget.startPosition + currentTarget.relativePosition;
+                //transform.rotation = Quaternion.Euler(currentTarget.startRotation + currentTarget.relativeRotation);
+                newStartPosition = currentTarget.startPosition + currentTarget.relativePosition;
+                newStartRotation = Quaternion.Euler(currentTarget.startRotation + currentTarget.relativeRotation);
             }
             else
             {
-                transform.localPosition = currentTarget.startPosition + currentTarget.relativePosition;
-                transform.localRotation = Quaternion.Euler(currentTarget.startRotation + currentTarget.relativeRotation);
+                //transform.localPosition = currentTarget.startPosition + currentTarget.relativePosition;
+                //transform.localRotation = Quaternion.Euler(currentTarget.startRotation + currentTarget.relativeRotation);
+                newStartPosition = currentTarget.startPosition + currentTarget.relativePosition;
+                newStartRotation = Quaternion.Euler(currentTarget.startRotation + currentTarget.relativeRotation);
             }
             transform.localScale = currentTarget.startScale + currentTarget.relativeScale;
 
@@ -354,13 +362,17 @@ public class ObstacleTypedata : MonoBehaviour
                 currentTarget = JsonUtility.FromJson<ObstacleMovementTarget>(targetStr);
                 if (obstacleSpace == ObstacleSpace.World)
                 {
-                    currentTarget.startPosition = transform.position;
-                    currentTarget.startRotation = transform.rotation.eulerAngles;
+                    //currentTarget.startPosition = transform.position;
+                    //currentTarget.startRotation = transform.rotation.eulerAngles;
+                    currentTarget.startPosition = newStartPosition;
+                    currentTarget.startRotation = newStartRotation.eulerAngles;
                 }
                 else
                 {
-                    currentTarget.startPosition = transform.localPosition;
-                    currentTarget.startRotation = transform.localRotation.eulerAngles;
+                    //currentTarget.startPosition = transform.localPosition;
+                    //currentTarget.startRotation = transform.localRotation.eulerAngles;
+                    currentTarget.startPosition = newStartPosition;
+                    currentTarget.startRotation = newStartRotation.eulerAngles;
                 }
                 currentTarget.startScale = transform.localScale;
                 if (currentTarget.durationType == ObstacleValueType.RandomBetween)
@@ -431,6 +443,7 @@ public class ObstacleTypedata : MonoBehaviour
     ObstacleMovementTarget movement)
     {
         float percentageTimeSpent = (movement.duration - movement.remainingDuration) / movement.duration;
+        percentageTimeSpent = Mathf.Clamp(percentageTimeSpent, 0, 1);
 
         float percentagePosition = Evaluate(
             percentageTimeSpent,
@@ -439,12 +452,13 @@ public class ObstacleTypedata : MonoBehaviour
         );
 
         Vector3 aimPosition = movement.startPosition + movement.relativePosition * percentagePosition;
-        if (aimPosition.x.Equals(float.NaN) || aimPosition.y.Equals(float.NaN))
+        if (!float.IsFinite(aimPosition.x) ||
+            !float.IsFinite(aimPosition.y) ||
+            !float.IsFinite(aimPosition.z))
         {
             rb.velocity = Vector3.zero;
             return;
         }
-        Physics.SyncTransforms();
         if (obstacleSpace == ObstacleSpace.World)
         {
             rb.MovePosition(aimPosition);

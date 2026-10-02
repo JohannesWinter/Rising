@@ -8,6 +8,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Rendering.Universal;
+using UnityEngine.UIElements;
 
 public class GameplayManager : MonoBehaviour
 {
@@ -19,7 +20,7 @@ public class GameplayManager : MonoBehaviour
     public HealthDisplay healthDisplay;
 
     public GameObject levelStopMenu;
-    public Button levelCancelButton;
+    public UnityEngine.UI.Button levelCancelButton;
     public int currentTimeScale;
     public int currentLevel;
     public int maxHealth;
@@ -289,8 +290,8 @@ public class GameplayManager : MonoBehaviour
         foreach (ObstacleTypedata obs in Manager.m.obstacleTypeDatasStopInMenu) obs.Stop();
         Manager.m.playerController.dead = false;
         currentState = GameState.Menu;
-        
     }
+
 }
 
 public enum GameState

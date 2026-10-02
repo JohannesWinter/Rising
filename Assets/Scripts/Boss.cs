@@ -134,7 +134,7 @@ public class Boss : MonoBehaviour
     }
     void FixedUpdate()
     {
-        if (runGeneral && Manager.m.gameplayManager.currentState != GameState.Resetting)
+        if (runGeneral && Manager.m.gameplayManager.currentState != GameState.Resetting && Manager.m.gameplayManager.currentState != GameState.Menu)
         {
             UpdateBossPosition();
         }
@@ -284,7 +284,6 @@ public class Boss : MonoBehaviour
     }
     public IEnumerator ExecuteAbility(AbilityData ad, Vector2 startPosition, float abilityDurationScaling, float abilityDuration, bool autoEnd = false)
     {
-
         ad.obsSpace.transform.localPosition = startPosition;
         float indicationTime = ad.indicationTime / Mathf.Lerp(1, abilitySpeed, abilityDurationScaling);
         if (ad.abilityIndicator != null)
@@ -301,8 +300,6 @@ public class Boss : MonoBehaviour
                 yield break;
             }
         }
-        //if (ad.obs.GetComponent<Renderer>()) ad.obs.GetComponent<Renderer>().enabled = true;
-        //if (ad.obs.GetComponent<Collider2D>()) ad.obs.GetComponent<Collider2D>().enabled = true;
         Manager.EnableAllColliders(ad.obs.gameObject);
         Manager.EnableAllRenderers(ad.obs.gameObject);
 
