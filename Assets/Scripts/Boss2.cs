@@ -37,7 +37,11 @@ public class Boss2 : MonoBehaviour, BossPerformer
     {
         if (Manager.m.gameplayManager.currentState == GameState.Menu)
         {
-            currentlySpinning = false;
+            if (currentlySpinning)
+            {
+                currentlySpinning = false;
+            }
+            
             spinner.transform.rotation = Quaternion.Euler(new Vector3(0, 0, -80));
             antiSpinGear.transform.rotation = Quaternion.Euler(Vector3.zero);
             var indicators = boss?.abilities?
@@ -156,7 +160,9 @@ public class Boss2 : MonoBehaviour, BossPerformer
                 int toRemovePos = -1;
                 int toRemovePos2 = -1;
                 if (currentlySpinning == false)
-                    toRemovePos = (new System.Random()).Next(0,abilityPos == 3 ? 8 : 9); //0 inclusice, 8/9 exclusive
+                {
+                    toRemovePos = (new System.Random()).Next(0, abilityPos == 3 ? 8 : 9); //0 inclusice, 8/9 exclusive
+                }
                 else
                 {
                     toRemovePos = (new System.Random()).Next(0, abilityPos == 3 ? 3 : 4);
@@ -197,8 +203,8 @@ public class Boss2 : MonoBehaviour, BossPerformer
         if (boss.runGeneral == false) yield break;
         //boss.InitializeAbilities(2);
 
-        boss.cooldownSpeed = 1.5f;
-        boss.abilitySpeed = 1.25f;
+        boss.cooldownSpeed = 1.25f;
+        boss.abilitySpeed = 1.15f;
         boss.globalCooldownMultiplier = 1/1.25f;
         boss.runAbilities = true;
         boss.runCooldowns = true;
@@ -210,31 +216,53 @@ public class Boss2 : MonoBehaviour, BossPerformer
         boss.runAbilities = false;
         boss.runCooldowns = false;
 
-        yield return new WaitForSeconds(3f);
+        yield return new WaitForSeconds(2f);
+        if (boss.runGeneral == false) yield break;
         boss.ExecuteAbility(boss.abilities[12], 5);
         yield return new WaitForSeconds(5f);
+        if (boss.runGeneral == false) yield break;
+        Manager.m.playerController.CameraShake(
+            0.4f,
+            2.5f,
+            20f,
+            0f,
+            2f,
+            0.5f,
+            15f
+            );
+        yield return new WaitForSeconds(3.5f);
+        if (boss.runGeneral == false) yield break;
         spinner.transform.rotation = Quaternion.Euler(new Vector3(0, 0, -80));
         antiSpinGear.transform.rotation = Quaternion.Euler(Vector3.zero);
         StartCoroutine(Spin());
+        yield return new WaitForSeconds(4.5f);
         if (boss.runGeneral == false) yield break;
 
         boss.cooldownSpeed = 5f;
-        boss.abilitySpeed = 1.25f;
-        boss.globalCooldownMultiplier = 1/1.25f;
+        boss.abilitySpeed = 0.5f;
+        boss.globalCooldownMultiplier = 0.5f;
         boss.runAbilities = true;
         boss.runCooldowns = true;
         yield break;
     }
     IEnumerator End()
     {
-        boss.ExecuteAbility(boss.abilities[13], 5);
-        yield return new WaitForSeconds(3f);
-        if (boss.runGeneral == false) yield break;
         boss.runAbilities = false;
         boss.runCooldowns = false;
-        yield return new WaitForSeconds(2f);
+        yield return new WaitForSeconds(5);
+        Manager.m.playerController.CameraShake(
+            intensity: 0.5f,
+            duration: 5f,
+            frequenzy: 15f,
+            decreasePower: 0.2f
+            );
+        boss.ExecuteAbility(boss.abilities[13], 5);
+        Manager.DisableAllColliders(spinner);
+        yield return new WaitForSeconds(1.5f);
         if (boss.runGeneral == false) yield break;
         boss.ExecuteAbility(boss.abilities[11], 3);
+        yield return new WaitForSeconds(3.5f);
+        if (boss.runGeneral == false) yield break;
         currentlySpinning = false;
         yield break;
     }
@@ -262,16 +290,23 @@ public class Boss2 : MonoBehaviour, BossPerformer
         float maxSpinSpeed = 100;
         float currentSpinSpeed = 0;
         float spinAcceleration = 2;
+        float finalSpinAcceleration = 10;
         while (currentSpinSpeed < maxSpinSpeed && currentlySpinning)
         {
+            if (ended) currentSpinSpeed += finalSpinAcceleration * Time.deltaTime;
+            else currentSpinSpeed += spinAcceleration * Time.deltaTime;
+
             spinner.transform.Rotate(0, 0, currentSpinSpeed * Time.deltaTime);
-            currentSpinSpeed += spinAcceleration * Time.deltaTime;
-            antiSpinGear.transform.Rotate(0, 0, -currentSpinSpeed * Time.deltaTime);
+            antiSpinGear.transform.Rotate(0, 0, -currentSpinSpeed * Time.deltaTime * 2);
+
+            boss.abilitySpeed = 0.5f + (currentSpinSpeed / maxSpinSpeed) * 0.8f;
+            boss.globalCooldownMultiplier = 1 / boss.abilitySpeed;
+
             yield return null;
         }
-        currentSpinSpeed = maxSpinSpeed;
         while (currentlySpinning)
         {
+            if (ended) currentSpinSpeed += finalSpinAcceleration * Time.deltaTime;
             spinner.transform.Rotate(0, 0, currentSpinSpeed * Time.deltaTime);
             antiSpinGear.transform.Rotate(0, 0, -currentSpinSpeed * Time.deltaTime * 2);
             yield return null;

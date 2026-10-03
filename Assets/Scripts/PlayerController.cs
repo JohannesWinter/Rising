@@ -54,8 +54,6 @@ public class PlayerController : MonoBehaviour
 
     void FixedUpdate()
     {
-        //if (debug_shake) CameraShake(0.3f, 0.5f);
-        debug_shake = false;
         if (Manager.m.gameplayManager.currentState == GameState.Resetting)
         {
             this.GetComponent<Collider2D>().enabled = false;
@@ -201,11 +199,11 @@ public class PlayerController : MonoBehaviour
     IEnumerator ExecuteCameraShake(
         float intensity,
         float duration,
-        float frequenzy,
+        float frequency,
         float decreasePower,
         float rotationalIntensity,
         float rotationalDuration,
-        float rotationalFrequenzy)
+        float rotationalFrequency)
     {
         if (duration <= 0 || decreasePower < 0 || intensity == 0)
         {
@@ -238,10 +236,10 @@ public class PlayerController : MonoBehaviour
 
             // Translation
             float x =
-                (Mathf.PerlinNoise(seedX, elapsed * frequenzy) - 0.5f) * 2f;
+                (Mathf.PerlinNoise(seedX, elapsed * frequency) - 0.5f) * 2f;
 
             float y =
-                (Mathf.PerlinNoise(seedY, elapsed * frequenzy) - 0.5f) * 2f;
+                (Mathf.PerlinNoise(seedY, elapsed * frequency) - 0.5f) * 2f;
 
             shake.vector =
                 new Vector3(x, y, 0f) * intensity * strength;
@@ -263,7 +261,7 @@ public class PlayerController : MonoBehaviour
                 float rotation =
                     (Mathf.PerlinNoise(
                         seedRotation,
-                        elapsed * rotationalFrequenzy
+                        elapsed * rotationalFrequency
                     ) - 0.5f) * 2f;
 
                 rotationShake.vector =
