@@ -81,7 +81,7 @@ public class GameplayManager : MonoBehaviour
         {
             showText = false;
             Time.timeScale = currentTimeScale;
-            if (PlayerOutOfBounds() || Manager.m.playerController.dead)
+            if ((PlayerOutOfBounds() || Manager.m.playerController.dead) && Manager.m.playerController.invulnerable == false)
             {
                 Fail();
             }

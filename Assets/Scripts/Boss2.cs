@@ -94,6 +94,7 @@ public class Boss2 : MonoBehaviour, BossPerformer
             startedSection1 = false;
             startedSection2 = false;
             startedSection3 = false;
+            ended = false;
         }
     }
 
@@ -196,12 +197,11 @@ public class Boss2 : MonoBehaviour, BossPerformer
         boss.runAbilities = false;
         boss.runCooldowns = false;
 
-        boss.InitializeAbilities(new List<int> { 0, 1, 2, 3, 4});
         yield return new WaitForSeconds(3f);
         boss.ExecuteAbility(boss.abilities[10], 3);
         yield return new WaitForSeconds(5f);
         if (boss.runGeneral == false) yield break;
-        //boss.InitializeAbilities(2);
+        boss.InitializeAbilities(new List<int> { 0, 1, 2, 3, 4 });
 
         boss.cooldownSpeed = 1.25f;
         boss.abilitySpeed = 1.15f;
@@ -218,6 +218,15 @@ public class Boss2 : MonoBehaviour, BossPerformer
 
         yield return new WaitForSeconds(2f);
         if (boss.runGeneral == false) yield break;
+        Manager.m.playerController.CameraShake(
+            0.07f,
+            6f,
+            10f,
+            0f,
+            0.25f,
+            6f,
+            6f
+            );
         boss.ExecuteAbility(boss.abilities[12], 5);
         yield return new WaitForSeconds(5f);
         if (boss.runGeneral == false) yield break;
@@ -290,7 +299,7 @@ public class Boss2 : MonoBehaviour, BossPerformer
         float maxSpinSpeed = 100;
         float currentSpinSpeed = 0;
         float spinAcceleration = 2;
-        float finalSpinAcceleration = 10;
+        float finalSpinAcceleration = 40;
         while (currentSpinSpeed < maxSpinSpeed && currentlySpinning)
         {
             if (ended) currentSpinSpeed += finalSpinAcceleration * Time.deltaTime;
@@ -299,7 +308,7 @@ public class Boss2 : MonoBehaviour, BossPerformer
             spinner.transform.Rotate(0, 0, currentSpinSpeed * Time.deltaTime);
             antiSpinGear.transform.Rotate(0, 0, -currentSpinSpeed * Time.deltaTime * 2);
 
-            boss.abilitySpeed = 0.5f + (currentSpinSpeed / maxSpinSpeed) * 0.8f;
+            boss.abilitySpeed = 0.7f + (currentSpinSpeed / maxSpinSpeed) * 0.55f;
             boss.globalCooldownMultiplier = 1 / boss.abilitySpeed;
 
             yield return null;

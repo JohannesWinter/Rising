@@ -34,6 +34,8 @@ public class PlayerController : MonoBehaviour
 
     [Header("Debug")]
     public bool debug_shake;
+    public bool invulnerable;
+    public bool untouchable;
     // Start is called before the first frame update
     void Start()
     {
@@ -71,6 +73,10 @@ public class PlayerController : MonoBehaviour
 
     void UpdateTarget()
     {
+        if (untouchable)
+        {
+            playerObject.layer = LayerMask.NameToLayer("Empty");
+        }
         if (Manager.m.gameplayManager.currentState == GameState.Stopped || Manager.m.gameplayManager.currentState == GameState.Resetting || stunTimer > 0)
         {
             return;
