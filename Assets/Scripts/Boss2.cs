@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.ConstrainedExecution;
 using UnityEngine;
 
 public class Boss2 : MonoBehaviour, BossPerformer
@@ -19,13 +20,17 @@ public class Boss2 : MonoBehaviour, BossPerformer
 
     Transform cam;
 
-    [Header("Specs")]
     public GameObject spinner;
     public GameObject antiSpinGear;
     bool currentlySpinning;
     float currentAbility1YAdd = 0;
     float currentAbility2YAdd = 0;
     float currentAbility0XAdd = 0;
+
+    public ShakeObject chainShaker1;
+    public ShakeObject chainShaker2;
+
+    List<Coroutine> currentCoroutines = new List<Coroutine>();
 
 
     private void Start()
@@ -68,22 +73,26 @@ public class Boss2 : MonoBehaviour, BossPerformer
             if (cam.localPosition.y > section1Start && startedSection1 == false)
             {
                 startedSection1 = true;
-                StartCoroutine(SetStage1());
+                var coroutine = StartCoroutine(SetStage1());
+                currentCoroutines.Add(coroutine);
             }
             if (cam.localPosition.y > section2Start && startedSection2 == false)
             {
                 startedSection2 = true;
-                StartCoroutine(SetStage2());
+                var coroutine = StartCoroutine(SetStage2());
+                currentCoroutines.Add(coroutine);
             }
             if (cam.localPosition.y > section3Start && startedSection3 == false)
             {
                 startedSection3 = true;
-                StartCoroutine(SetStage3());
+                var coroutine = StartCoroutine(SetStage3());
+                currentCoroutines.Add(coroutine);
             }
             if (cam.localPosition.y > end && ended == false)
             {
                 ended = true;
-                StartCoroutine(End());
+                var coroutine = StartCoroutine(End());
+                currentCoroutines.Add(coroutine);
             }
         }
         else
@@ -95,6 +104,21 @@ public class Boss2 : MonoBehaviour, BossPerformer
             startedSection2 = false;
             startedSection3 = false;
             ended = false;
+            chainShaker1.frequency = 0;
+            chainShaker1.intensity = 0;
+            chainShaker2.frequency = 0;
+            chainShaker2.intensity = 0;
+            if (currentCoroutines.Count > 0)
+            {
+                foreach (var coroutine in currentCoroutines)
+                {
+                    if (coroutine != null)
+                    {
+                        StopCoroutine(coroutine);
+                    }
+                }
+                currentCoroutines.Clear();
+            }
         }
     }
 
@@ -227,6 +251,8 @@ public class Boss2 : MonoBehaviour, BossPerformer
             6f,
             6f
             );
+        spinner.transform.rotation = Quaternion.Euler(new Vector3(0, 0, -80));
+        antiSpinGear.transform.rotation = Quaternion.Euler(Vector3.zero);
         boss.ExecuteAbility(boss.abilities[12], 5);
         yield return new WaitForSeconds(5f);
         if (boss.runGeneral == false) yield break;
@@ -239,10 +265,12 @@ public class Boss2 : MonoBehaviour, BossPerformer
             0.5f,
             15f
             );
+        chainShaker1.frequency = 0.6f;
+        chainShaker1.intensity = 0.04f;
+        chainShaker2.frequency = 0.6f;
+        chainShaker2.intensity = 0.04f;
         yield return new WaitForSeconds(3.5f);
         if (boss.runGeneral == false) yield break;
-        spinner.transform.rotation = Quaternion.Euler(new Vector3(0, 0, -80));
-        antiSpinGear.transform.rotation = Quaternion.Euler(Vector3.zero);
         StartCoroutine(Spin());
         yield return new WaitForSeconds(4.5f);
         if (boss.runGeneral == false) yield break;
@@ -289,8 +317,6 @@ public class Boss2 : MonoBehaviour, BossPerformer
     IEnumerator Spin()
     {
         currentlySpinning = true;
-        spinner.transform.rotation = Quaternion.Euler(new Vector3(0, 0, -80));
-        antiSpinGear.transform.rotation = Quaternion.Euler(Vector3.zero);
         yield return new WaitForSeconds(3);
         if (currentlySpinning == false)
         {

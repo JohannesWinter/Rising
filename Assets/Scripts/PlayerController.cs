@@ -21,7 +21,7 @@ public class PlayerController : MonoBehaviour
     public float maxSpeedDistance;
     public float baseHitboxSize;
     Vector2 mousePos = Vector2.zero;
-    Vector2 currentAirPush;
+    List<AirPushVector> airPushVectors = new List<AirPushVector>();
 
     float stunTimer;
 
@@ -29,8 +29,8 @@ public class PlayerController : MonoBehaviour
 
     Vector3 cameraNormalPosition = Vector3.zero;
     Quaternion cameraNormalRotation;
-    List<vector3Wrapper> cameraShakeOffsets = new List<vector3Wrapper>();
-    List<vector3Wrapper> cameraRotationShakeOffsets = new List<vector3Wrapper>();
+    List<Vector3Wrapper> cameraShakeOffsets = new List<Vector3Wrapper>();
+    List<Vector3Wrapper> cameraRotationShakeOffsets = new List<Vector3Wrapper>();
 
     [Header("Debug")]
     public bool debug_shake;
@@ -119,7 +119,17 @@ public class PlayerController : MonoBehaviour
     {
         if (Manager.m.gameplayManager.currentState != GameState.Stopped && Manager.m.gameplayManager.currentState != GameState.Resetting && stunTimer <= 0)
         {
-            Vector3 adjustedTargetPos = targetPos + Manager.m.playerCameraSpace.transform.localPosition;
+            Vector2 currentAirPush = Vector2.zero;
+            for (int i = airPushVectors.Count - 1; i >= 0; i--)
+            {
+                var push = airPushVectors[i];
+                currentAirPush += push.vector;
+                if (push.frameCounter <= 0) airPushVectors.RemoveAt(i);
+                push.frameCounter--;
+            }
+
+            Vector3 currentAirPushVec3 = currentAirPush;
+            Vector3 adjustedTargetPos = targetPos + Manager.m.playerCameraSpace.transform.localPosition + currentAirPushVec3;
             Vector3 adjustedRelativeTargetPos = adjustedTargetPos - playerTransform.localPosition;
             adjustedRelativeTargetPos.z = 0;
 
@@ -138,15 +148,34 @@ public class PlayerController : MonoBehaviour
                 adjustedRelativeTargetPos = adjustedRelativeTargetPos.normalized * maxSpeedDistance;
             }
 
+            Vector2 targetVelocity = adjustedRelativeTargetPos / Time.fixedDeltaTime;
+            Vector2 velocityChange = targetVelocity - rb.velocity;
+            bool newVelocityHigher = targetVelocity.magnitude > rb.velocity.magnitude;
+            float windAlignment = Vector2.Dot(
+                velocityChange.normalized,
+                currentAirPush
+            );
+            float decellerationStart = 40;
+            float decellerationStop = 30;
+            if (windAlignment < 0 && newVelocityHigher)
+            {
+                velocityChange = velocityChange / (Mathf.Max(1,currentAirPush.magnitude) * decellerationStart);
+            }
+            if (windAlignment < 0 && newVelocityHigher == false)
+            {
+                if (velocityChange.magnitude > currentAirPush.magnitude * Time.fixedDeltaTime * decellerationStop)
+                {
+                    velocityChange = velocityChange * Mathf.Min(1, decellerationStop * Time.deltaTime);
+                    //Vector2 newTargetVelocity = velocityChange.normalized * -1 * (currentAirPush.magnitude * Time.fixedDeltaTime * decellerationStop);
+                    //velocityChange = newTargetVelocity - rb.velocity;
+                }
+                else
+                {
+                    velocityChange = velocityChange / (Mathf.Max(1, currentAirPush.magnitude) * decellerationStart);
+                }
+            }
 
-            //if (adjustedRelativeTargetPos.magnitude > maxForceDistance)
-            //{
-            //    adjustedRelativeTargetPos = adjustedRelativeTargetPos.normalized * maxForceDistance;
-            //}
-            Vector3 targetVelocity = adjustedRelativeTargetPos / Time.fixedDeltaTime;
-
-            rb.velocity = targetVelocity; // + Vector3.up * currentGeneralSpeed
-            rb.velocity += currentAirPush;
+            rb.velocity += velocityChange; // + Vector3.up * currentGeneralSpeed
         }
         else
         {
@@ -165,7 +194,7 @@ public class PlayerController : MonoBehaviour
 
         Vector3 totalCameraOffset = Vector3.zero;
 
-        foreach (vector3Wrapper offset in cameraShakeOffsets)
+        foreach (Vector3Wrapper offset in cameraShakeOffsets)
             totalCameraOffset += offset.vector;
 
         Manager.m.playerCameraObj.transform.localPosition =
@@ -174,7 +203,7 @@ public class PlayerController : MonoBehaviour
 
         Vector3 totalRotationOffset = Vector3.zero;
 
-        foreach (vector3Wrapper offset in cameraRotationShakeOffsets)
+        foreach (Vector3Wrapper offset in cameraRotationShakeOffsets)
             totalRotationOffset += offset.vector;
 
         Manager.m.playerCameraObj.transform.localRotation =
@@ -222,10 +251,10 @@ public class PlayerController : MonoBehaviour
         float seedY = UnityEngine.Random.value * 1000f;
         float seedRotation = UnityEngine.Random.value * 1000f;
 
-        vector3Wrapper shake = vector3Wrapper.zero();
+        Vector3Wrapper shake = Vector3Wrapper.zero();
         cameraShakeOffsets.Add(shake);
 
-        vector3Wrapper rotationShake = vector3Wrapper.zero();
+        Vector3Wrapper rotationShake = Vector3Wrapper.zero();
 
         if (rotationalIntensity != 0 && rotationalDuration > 0)
         {
@@ -320,9 +349,6 @@ public class PlayerController : MonoBehaviour
                     dead = true;
                     break;
                 case ObstacleCollisionType.Air:
-                    currentAirPush += obs.AIR_airFlow.AIR_force * obs.AIR_airFlow.AIR_currentPercentageAirStrength + obs.AIR_airFlow.AIR_force * RandomOf(new float[] { -1, 1 }) * UnityEngine.Random.Range(0, obs.AIR_airFlow.AIR_variety) * obs.AIR_airFlow.AIR_currentPercentageAirStrength;
-                    if (obs.AIR_airFlow.AIR_fullStrengthTime > 0) obs.AIR_airFlow.AIR_currentPercentageAirStrength += Time.fixedDeltaTime / obs.AIR_airFlow.AIR_fullStrengthTime;
-                    else obs.AIR_airFlow.AIR_currentPercentageAirStrength = 1;
                     break;
                 case ObstacleCollisionType.Portal:
                     if (obs.PORTAL_portalData.relativity == Relativity.Relative)
@@ -344,9 +370,15 @@ public class PlayerController : MonoBehaviour
             HandleObstacleTrigger(collision.gameObject.GetComponent<ObstacleTypedata>());
         }
     }
+    private void OnTriggerStay2D(Collider2D collision)
+    {
+        if (collision.gameObject.GetComponent<ObstacleTypedata>())
+        {
+            HandleObstacleTriggerStay(collision.gameObject.GetComponent<ObstacleTypedata>());
+        }
+    }
     void HandleObstacleTrigger(ObstacleTypedata obs)
     {
-        print(obs.gameObject);
         if (Manager.m.gameplayManager.currentState == GameState.Running)
         {
             switch (obs.collisionType)
@@ -357,9 +389,6 @@ public class PlayerController : MonoBehaviour
                     dead = true;
                     break;
                 case ObstacleCollisionType.Air:
-                    currentAirPush += obs.AIR_airFlow.AIR_force * obs.AIR_airFlow.AIR_currentPercentageAirStrength + obs.AIR_airFlow.AIR_force * RandomOf(new float[] { -1, 1 }) * UnityEngine.Random.Range(0, obs.AIR_airFlow.AIR_variety) * obs.AIR_airFlow.AIR_currentPercentageAirStrength;
-                    if (obs.AIR_airFlow.AIR_fullStrengthTime > 0) obs.AIR_airFlow.AIR_currentPercentageAirStrength += Time.fixedDeltaTime / obs.AIR_airFlow.AIR_fullStrengthTime;
-                    else obs.AIR_airFlow.AIR_currentPercentageAirStrength = 1;
                     break;
                 case ObstacleCollisionType.Portal:
                     if (obs.PORTAL_portalData.relativity == Relativity.Relative)
@@ -372,6 +401,70 @@ public class PlayerController : MonoBehaviour
 
                     break;
             }
+        }
+    }
+
+    public void HandleObstacleTriggerStay(ObstacleTypedata obs)
+    {
+        if (Manager.m.gameplayManager.currentState == GameState.Running)
+        {
+            switch (obs.collisionType)
+            {
+                case ObstacleCollisionType.Simple:
+                    break;
+                case ObstacleCollisionType.Sharp:
+                    break;
+                case ObstacleCollisionType.Air:
+                    HandleAirTrigger(obs);
+                    break;
+                case ObstacleCollisionType.Portal:
+                    break;
+            }
+        }
+        else
+        {
+            switch (obs.collisionType)
+            {
+                case ObstacleCollisionType.Simple:
+                    break;
+                case ObstacleCollisionType.Sharp:
+                    break;
+                case ObstacleCollisionType.Air:
+                    HandleAirTrigger(obs);
+
+                    break;
+                case ObstacleCollisionType.Portal:
+                    break;
+            }
+        }
+    }
+
+    void HandleAirTrigger(ObstacleTypedata obs)
+    {
+        AirPushVector currentPush = new AirPushVector();
+        bool isNew = true;
+        foreach (var push in airPushVectors)
+        {
+            if (push.source.Equals(obs))
+            {
+                currentPush = push;
+                isNew = false;
+                break;
+            }
+        }
+        if (obs.AIR_airFlow.AIR_fullStrengthTime > 0) currentPush.currentStrength += Time.fixedDeltaTime / obs.AIR_airFlow.AIR_fullStrengthTime;
+        else currentPush.currentStrength = 1;
+
+        currentPush.currentStrength = Mathf.Min(currentPush.currentStrength, 1);
+
+        currentPush.vector = obs.AIR_airFlow.AIR_force * currentPush.currentStrength +
+            obs.AIR_airFlow.AIR_force * RandomOf(new float[] { -1, 1 }) * UnityEngine.Random.Range(0, obs.AIR_airFlow.AIR_variety) * currentPush.currentStrength;
+
+        currentPush.frameCounter = 1;
+        if (isNew)
+        {
+            currentPush.source = obs;
+            airPushVectors.Add(currentPush);
         }
     }
 
@@ -390,21 +483,30 @@ public class PlayerController : MonoBehaviour
     {
         return randoms[UnityEngine.Random.Range(0, randoms.Length)];
     }
-    private class vector3Wrapper
+    private class Vector3Wrapper
     {
-        public vector3Wrapper() { }
-        public vector3Wrapper(Vector3 vector)
+        public Vector3Wrapper() { }
+        public Vector3Wrapper(Vector3 vector)
         {
             this.vector = vector;
         }
-        public vector3Wrapper(float x, float y, float z)
+        public Vector3Wrapper(float x, float y, float z)
         {
             this.vector = new Vector3(x, y, z);
         }
         public Vector3 vector;
-        public static vector3Wrapper zero()
+        public static Vector3Wrapper zero()
         {
-            return new vector3Wrapper();
+            return new Vector3Wrapper();
         }
+    }
+
+    private class AirPushVector
+    {
+        public ObstacleTypedata source;
+        public Vector2 vector;
+        public float currentStrength;
+        public int frameCounter;
+        
     }
 }

@@ -2,13 +2,38 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-[ExecuteInEditMode]
 
 public class test : MonoBehaviour
 {
-    private void Update()
+    bool up = true;
+    float timer = 0;
+    public float speed;
+    public float duration;
+    private void Start()
     {
-        int toRemovePos = (new System.Random()).Next(0, 7);
-        print(toRemovePos);
+        timer = duration;
+    }
+    public void Update()
+    {
+        if (up)
+        {
+            timer -= Time.deltaTime;
+            gameObject.transform.Translate(0, speed * Time.deltaTime, 0, Space.World);
+            if (timer < 0)
+            {
+                up = false;
+                timer = duration;
+            }
+        }
+        else
+        {
+            timer -= Time.deltaTime;
+            gameObject.transform.Translate(0, -speed * Time.deltaTime, 0, Space.World);
+            if (timer < 0)
+            {
+                up = true;
+                timer = duration;
+            }
+        }
     }
 }

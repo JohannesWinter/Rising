@@ -70,7 +70,6 @@ public class ObstacleTypedata : MonoBehaviour
 
     [Header("AIR")]
     public AirFlow AIR_airFlow;
-    float lastFixedUpdatePercentageAirStrength;
 
     [Header("PORTAL")]
     public PortalData PORTAL_portalData;
@@ -179,7 +178,7 @@ public class ObstacleTypedata : MonoBehaviour
         }
         if (collisionType == ObstacleCollisionType.Air)
         {
-            UpdateAirPush();
+            //lorem ipsum
         }
     }
 
@@ -211,7 +210,7 @@ public class ObstacleTypedata : MonoBehaviour
         }
         if (collisionType == ObstacleCollisionType.Air)
         {
-            lastFixedUpdatePercentageAirStrength = 0;
+            //lorem ipsum
         }
     }
     public void Stop()
@@ -690,20 +689,6 @@ public class ObstacleTypedata : MonoBehaviour
         angularSpeedLastFrame = rb.angularVelocity;
     }
 
-    void UpdateAirPush()
-    {
-        if (AIR_airFlow.AIR_currentPercentageAirStrength == lastFixedUpdatePercentageAirStrength)
-            AIR_airFlow.AIR_currentPercentageAirStrength = 0;
-
-        if (AIR_airFlow.AIR_currentPercentageAirStrength > 1)
-            AIR_airFlow.AIR_currentPercentageAirStrength = 1;
-        else if (AIR_airFlow.AIR_currentPercentageAirStrength < 0)
-            AIR_airFlow.AIR_currentPercentageAirStrength = 0;
-
-        //last
-        lastFixedUpdatePercentageAirStrength = AIR_airFlow.AIR_currentPercentageAirStrength;
-    }
-
     bool CheckColliderList(List<Collider2D> colliders)
     {
         ContactPoint2D[] contactBuffer = new ContactPoint2D[16];
@@ -1024,7 +1009,6 @@ public class AirFlow
     public Vector2 AIR_force;
     public float AIR_variety;
     public float AIR_fullStrengthTime;
-    public float AIR_currentPercentageAirStrength;
 }
 [Serializable]
 public class PortalData

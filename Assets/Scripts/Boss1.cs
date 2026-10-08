@@ -20,7 +20,7 @@ public class Boss1 : MonoBehaviour, BossPerformer
 
     private void Start()
     {
-        cam = Manager.m.playerCamera.gameObject.transform;
+        cam = Manager.m.playerCameraSpace.gameObject.transform;
     }
     // Update is called once per frame
     void Update()
@@ -108,7 +108,32 @@ public class Boss1 : MonoBehaviour, BossPerformer
     }
     public void Notify(int abilityPos)
     {
-        return;
+        switch (abilityPos)
+        {
+            case 0:
+            case 1:
+                Manager.m.playerController.CameraShake(
+                    intensity: 0.1f,
+                    duration: 7f,
+                    frequenzy: 15f,
+                    decreasePower: 0.3f
+                );
+                break;
+            case 2:
+                break;
+            case 3:
+                break;
+            case 4:
+                break;
+            case 5:
+                Manager.m.playerController.CameraShake(
+                    intensity: 0.7f,
+                    duration: 0.6f,
+                    frequenzy: 20f,
+                    decreasePower: 0f
+                );
+                break;
+        }
     }
 
 
