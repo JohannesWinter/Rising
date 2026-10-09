@@ -9,6 +9,7 @@ public class PlayerController : MonoBehaviour
     public float currentGeneralSpeed;
     public bool dead;
     public GameObject playerObject;
+    public GameObject playerAnimationBody;
     public Rigidbody2D rb;
     public float minSideGap;
     public float minTopGap;
@@ -22,6 +23,11 @@ public class PlayerController : MonoBehaviour
     public float baseHitboxSize;
     Vector2 mousePos = Vector2.zero;
     List<AirPushVector> airPushVectors = new List<AirPushVector>();
+    int airPushVectorsLengthLastFrame = 0;
+    float windNoiseSpeed = 0.5f;
+    float windNoiseAmplitude = 0.5f;
+    float windNoiseSeed = 787;
+   
 
     float stunTimer;
 
@@ -69,6 +75,7 @@ public class PlayerController : MonoBehaviour
         }
         MoveToTarget();
         UpdateCameraMovement();
+        airPushVectorsLengthLastFrame = airPushVectors.Count;
     }
 
     void UpdateTarget()
@@ -119,17 +126,43 @@ public class PlayerController : MonoBehaviour
     {
         if (Manager.m.gameplayManager.currentState != GameState.Stopped && Manager.m.gameplayManager.currentState != GameState.Resetting && stunTimer <= 0)
         {
+            Vector3 adjustedTargetPos = targetPos + Manager.m.playerCameraSpace.transform.localPosition;
+            Vector2 adjustedAbsTargetPos = targetPos + Manager.m.playerCameraSpace.transform.position;
+
             Vector2 currentAirPush = Vector2.zero;
+
             for (int i = airPushVectors.Count - 1; i >= 0; i--)
             {
                 var push = airPushVectors[i];
-                currentAirPush += push.vector;
+                var collider = push.source.GetComponent<Collider2D>();
+
+                if (collider.OverlapPoint(adjustedAbsTargetPos + push.vector + push.vector))
+                {
+                    currentAirPush += push.vector * push.currentStrength;
+                }
+                else
+                {
+                    var actualPosition = collider.ClosestPoint(adjustedAbsTargetPos + push.vector);
+                    currentAirPush += (actualPosition - adjustedAbsTargetPos) * 0.6f;
+                }
                 if (push.frameCounter <= 0) airPushVectors.RemoveAt(i);
                 push.frameCounter--;
             }
-
+            if (currentAirPush.magnitude > 0.01f)
+            {
+                adjustedTargetPos += new Vector3(
+                    (Mathf.PerlinNoise1D(windNoiseSeed + Time.time * windNoiseSpeed) - 0.5f),
+                    (Mathf.PerlinNoise1D(windNoiseSeed * windNoiseSeed + Time.time * windNoiseSpeed) - 0.5f)
+                    ) * windNoiseAmplitude;
+                playerAnimationBody.GetComponent<ShakeObject>().intensity = 0.05f;
+            }
+            else
+            {
+                playerAnimationBody.GetComponent<ShakeObject>().intensity = 0f;
+            }
             Vector3 currentAirPushVec3 = currentAirPush;
-            Vector3 adjustedTargetPos = targetPos + Manager.m.playerCameraSpace.transform.localPosition + currentAirPushVec3;
+
+            adjustedTargetPos += currentAirPushVec3;
             Vector3 adjustedRelativeTargetPos = adjustedTargetPos - playerTransform.localPosition;
             adjustedRelativeTargetPos.z = 0;
 
@@ -150,32 +183,65 @@ public class PlayerController : MonoBehaviour
 
             Vector2 targetVelocity = adjustedRelativeTargetPos / Time.fixedDeltaTime;
             Vector2 velocityChange = targetVelocity - rb.velocity;
-            bool newVelocityHigher = targetVelocity.magnitude > rb.velocity.magnitude;
-            float windAlignment = Vector2.Dot(
-                velocityChange.normalized,
-                currentAirPush
-            );
-            float decellerationStart = 40;
-            float decellerationStop = 30;
-            if (windAlignment < 0 && newVelocityHigher)
+
+            float decellerationStart = 100f;
+            float decellerationStop = 30f;
+            float maxSpeedAgainstCurrent = 2f;
+
+            if (currentAirPush.sqrMagnitude > 0.001f)
             {
-                velocityChange = velocityChange / (Mathf.Max(1,currentAirPush.magnitude) * decellerationStart);
-            }
-            if (windAlignment < 0 && newVelocityHigher == false)
-            {
-                if (velocityChange.magnitude > currentAirPush.magnitude * Time.fixedDeltaTime * decellerationStop)
+                Vector2 windDirection = currentAirPush.normalized;
+
+                Vector2 parallelChange =
+                    Vector2.Dot(velocityChange, windDirection) * windDirection;
+
+                Vector2 perpendicularChange =
+                    velocityChange - parallelChange;
+
+                float windAlignment =
+                    Vector2.Dot(velocityChange, windDirection);
+
+                float movementAlignment =
+                    Vector2.Dot(rb.velocity, windDirection);
+
+                bool newVelocityHigher =
+                    targetVelocity.magnitude > rb.velocity.magnitude;
+
+                if (windAlignment < 0f && newVelocityHigher)
                 {
-                    velocityChange = velocityChange * Mathf.Min(1, decellerationStop * Time.deltaTime);
-                    //Vector2 newTargetVelocity = velocityChange.normalized * -1 * (currentAirPush.magnitude * Time.fixedDeltaTime * decellerationStop);
-                    //velocityChange = newTargetVelocity - rb.velocity;
+                    parallelChange /= Mathf.Max(1f, currentAirPush.magnitude)
+                                      * decellerationStart;
+
+                    if (rb.velocity.magnitude > maxSpeedAgainstCurrent &&
+                        movementAlignment < 0f)
+                    {
+                        parallelChange = Vector2.zero;
+                    }
                 }
-                else
+                else if (windAlignment < 0f && newVelocityHigher == false)
                 {
-                    velocityChange = velocityChange / (Mathf.Max(1, currentAirPush.magnitude) * decellerationStart);
+                    if (parallelChange.magnitude >
+                        currentAirPush.magnitude * Time.fixedDeltaTime * decellerationStop)
+                    {
+                        parallelChange *=
+                            Mathf.Min(1f, decellerationStop * Time.fixedDeltaTime);
+                    }
+                    else
+                    {
+                        parallelChange /= Mathf.Max(1f, currentAirPush.magnitude)
+                                          * decellerationStart;
+                    }
                 }
+
+                velocityChange = parallelChange + perpendicularChange;
             }
 
-            rb.velocity += velocityChange; // + Vector3.up * currentGeneralSpeed
+            rb.velocity += velocityChange;
+
+            if (airPushVectorsLengthLastFrame == 0 && airPushVectors.Count > 0)
+            {
+                rb.velocity = Vector2.zero;
+            }
         }
         else
         {
@@ -186,7 +252,7 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    void UpdateCameraMovement()
+void UpdateCameraMovement()
     {
         Manager.m.playerCameraSpace.transform.Translate(
             Vector3.up * Time.fixedDeltaTime * currentGeneralSpeed
@@ -457,8 +523,9 @@ public class PlayerController : MonoBehaviour
 
         currentPush.currentStrength = Mathf.Min(currentPush.currentStrength, 1);
 
-        currentPush.vector = obs.AIR_airFlow.AIR_force * currentPush.currentStrength +
-            obs.AIR_airFlow.AIR_force * RandomOf(new float[] { -1, 1 }) * UnityEngine.Random.Range(0, obs.AIR_airFlow.AIR_variety) * currentPush.currentStrength;
+        currentPush.vector = obs.AIR_airFlow.AIR_force;
+        //currentPush.vector = obs.AIR_airFlow.AIR_force * currentPush.currentStrength +
+        //    obs.AIR_airFlow.AIR_force * RandomOf(new float[] { -1, 1 }) * UnityEngine.Random.Range(0, obs.AIR_airFlow.AIR_variety) * currentPush.currentStrength;
 
         currentPush.frameCounter = 1;
         if (isNew)
@@ -507,6 +574,5 @@ public class PlayerController : MonoBehaviour
         public Vector2 vector;
         public float currentStrength;
         public int frameCounter;
-        
     }
 }

@@ -7,6 +7,7 @@ using UnityEngine;
 public class ParticleBlocker : MonoBehaviour
 {
     public ParticleSystem ps;
+    public float reduceTimeTo = 1;
 
     List<ParticleSystem.Particle> enter = new List<ParticleSystem.Particle>();
 
@@ -22,7 +23,7 @@ public class ParticleBlocker : MonoBehaviour
         {
             ParticleSystem.Particle p = enter[i];
 
-            p.remainingLifetime = 1f;
+            p.remainingLifetime = reduceTimeTo;
 
             enter[i] = p;
         }
